@@ -7,17 +7,19 @@ from datetime import datetime
 class RagCLI:
     """
     CLI for the RAG project.
-    The CLI will be called like 
+    The CLI will be called like
     `uv run python -m src index`
     """
 
     def __init__(self,
                  repo_path="assets/vllm-0.10.1",
                  mode="full",
-                 questions_file="assets/Dataset_2025-09-21_valid_unanswered.json",
+                 questions_file=("assets/Dataset_2025-09-21",
+                                 "_valid_unanswered.json"),
                  search_string="OpenAI compatible server",
                  k=10,
-                 search_dataset_path="data/datasets/UnansweredQuestions/Dataset_2025-09-21_valid.json"
+                 search_dataset_path=("data/datasets/UnansweredQuestions/",
+                                      "Dataset_2025-09-21_valid.json")
                  ):
         self.repo_path = repo_path
         self.questions_file = questions_file
@@ -63,10 +65,10 @@ class RagCLI:
     def evaluate(self, search_results_path, ground_truth_path):
         """
         Evaluate search results by measuring recall@k on a dataset.
-        
-        Args:
+
+                Args:
             search_results_path: Path to the search results JSON file
-            ground_truth_path: Path to the ground 
+            ground_truth_path: Path to the ground
             truth/answered questions JSON file
         """
         print("📊 Measuring recall@k on dataset...")
@@ -87,22 +89,20 @@ class RagCLI:
             current_date = datetime.now()
             date_str = current_date.strftime("%Y-%m-%d")
             filename = f"Dataset_{date_str}_valid.json"
-            
             # Create the full path
             output_dir = "data/datasets/AnsweredQuestions"
             output_path = os.path.join(output_dir, filename)
-            
             # Create directory if it doesn't exist
             os.makedirs(output_dir, exist_ok=True)
-            
-            print(f"No output path provided, results will be saved to: {output_path}")  
+            print("No output path provided, results will be ")
+            print(f"saved to: {output_path}")
         # Implement generation logic here
         print("✅ Answer generation completed!")
 
     def answer(self, question, k=5):
         """
         Answer a single question using the RAG system.
-        
+
         Args:
             question: The question to answer
             k: The number of top results to return
@@ -111,6 +111,7 @@ class RagCLI:
         print(f"Question: {question}")
         # Implement single question answering logic here
         print("✅ Question answered!")
+
 
 def main():
     """Main entry point for the CLI."""
