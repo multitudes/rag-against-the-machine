@@ -1,0 +1,21 @@
+[project]
+name = "rage-against-the-machine"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dspy",
+    "fire",
+    "tqdm",
+    "langchain",
+    "bm25s",
+    "chromadb",
+    "chonkie",
+]
+
+[project.scripts]
+rage = "rage_against_the_machine.main:main"
+
+[tool.uv]
+package = true
