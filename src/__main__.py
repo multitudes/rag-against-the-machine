@@ -5,6 +5,7 @@ from datetime import datetime
 from file_processing import read_file
 from file_processing import extract_files_from_questions, get_all_files
 
+
 class RagCLI:
     """
     CLI for the RAG project.
@@ -13,7 +14,8 @@ class RagCLI:
     """
     def __init__(self,
                  repo_path="assets/vllm-0.10.1",
-                 mode="full",
+                #  mode="full",
+                 mode='selective',
                  questions_file=("data/questions.tsv"),
                  search_string="OpenAI compatible server",
                  k=10,
@@ -41,25 +43,21 @@ class RagCLI:
         # Implement ingestion logic here
         if self.mode == "selective":
             # Load questions to find which files to process
-            files_to_process = extract_files_from_questions(self.repo_path)
+            files_to_process = extract_files_from_questions(self.questions_file)
         else:
             # Get all files in repository
             files_to_process = get_all_files(self.repo_path)
-        
+
         for file_path in files_to_process:
             # 1. Read file content
             print(file_path)
             # content = read_file(file_path)
-            
             # # 2. Chunk the content (using chonkie)
             # chunks = self.chunk_content(content)
-            
             # # 3. Create searchable index (using bm25s)
             # self.index_chunks(chunks, file_path)
-            
             # # 4. Store in vector database (using chromadb)
             # self.store_chunks(chunks, file_path)
-    
 
     def search(self, search_string=None, k=None):
         """
