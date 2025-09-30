@@ -2,7 +2,8 @@
 import fire
 import os
 from datetime import datetime
-
+from file_processing import read_file
+from file_processing import extract_files_from_questions, get_all_files
 
 class RagCLI:
     """
@@ -10,12 +11,10 @@ class RagCLI:
     The CLI will be called like
     `uv run python -m src index`
     """
-
     def __init__(self,
                  repo_path="assets/vllm-0.10.1",
                  mode="full",
-                 questions_file=("assets/Dataset_2025-09-21",
-                                 "_valid_unanswered.json"),
+                 questions_file=("data/questions.tsv"),
                  search_string="OpenAI compatible server",
                  k=10,
                  search_dataset_path=("data/datasets/UnansweredQuestions/",
@@ -39,6 +38,28 @@ class RagCLI:
         print(f"Ingestion mode: {self.mode}")
         if self.questions_file:
             print(f"Questions file: {self.questions_file}")
+        # Implement ingestion logic here
+        if self.mode == "selective":
+            # Load questions to find which files to process
+            files_to_process = extract_files_from_questions(self.repo_path)
+        else:
+            # Get all files in repository
+            files_to_process = get_all_files(self.repo_path)
+        
+        for file_path in files_to_process:
+            # 1. Read file content
+            print(file_path)
+            # content = read_file(file_path)
+            
+            # # 2. Chunk the content (using chonkie)
+            # chunks = self.chunk_content(content)
+            
+            # # 3. Create searchable index (using bm25s)
+            # self.index_chunks(chunks, file_path)
+            
+            # # 4. Store in vector database (using chromadb)
+            # self.store_chunks(chunks, file_path)
+    
 
     def search(self, search_string=None, k=None):
         """
