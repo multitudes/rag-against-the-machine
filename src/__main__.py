@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from file_processing import read_file
 from file_processing import extract_files_from_questions, get_all_files
+import logging
 
 
 class RagCLI:
@@ -34,30 +35,34 @@ class RagCLI:
         Ingest documents from a repository for indexing.
         Uses the instance variables set during initialization.
         """
+        logger = logging.getLogger(__name__)
+        logger.info("Ingesting documents...")
+        logger.info(f"Repository path: {self.repo_path}")
+        logger.info(f"Ingestion mode: {self.mode}")
+        logger.info(f"Questions file: {self.questions_file}")
+        try:
+            if self.mode == "selective":
+                # Load questions to find which files to process
+                files_to_process = extract_files_from_questions(self.questions_file)
+            else:
+                # Get all files in repository
+                files_to_process = get_all_files(self.repo_path)
 
-        print("Ingesting documents...")
-        print(f"Repository path: {self.repo_path}")
-        print(f"Ingestion mode: {self.mode}")
-        if self.questions_file:
-            print(f"Questions file: {self.questions_file}")
-        # Implement ingestion logic here
-        if self.mode == "selective":
-            # Load questions to find which files to process
-            files_to_process = extract_files_from_questions(self.questions_file)
-        else:
-            # Get all files in repository
-            files_to_process = get_all_files(self.repo_path)
-
-        for file_path in files_to_process:
-            # 1. Read file content
-            print(file_path)
-            # content = read_file(file_path)
-            # # 2. Chunk the content (using chonkie)
-            # chunks = self.chunk_content(content)
-            # # 3. Create searchable index (using bm25s)
-            # self.index_chunks(chunks, file_path)
-            # # 4. Store in vector database (using chromadb)
-            # self.store_chunks(chunks, file_path)
+            for file_path in files_to_process:
+                logger.info(f"Processing file: {file_path}")
+                # 1. Read file content
+                content = read_file(file_path)
+                
+                # # 2. Chunk the content (using chonkie)
+                # chunks = self.chunk_content(content)
+                # # 3. Create searchable index (using bm25s)
+                # self.index_chunks(chunks, file_path)
+                # # 4. Store in vector database (using chromadb)
+                # self.store_chunks(chunks, file_path)
+        except Exception as e:
+            logger.error(f"Ingestion failed: {e}")
+            return
+    
 
     def search(self, search_string=None, k=None):
         """
