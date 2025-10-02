@@ -78,7 +78,12 @@ class RagCLI:
 
         try:
             searcher = Searcher(index_dir="bm25s_indices/")
-            searcher.search(query=search_string, k=5)
+            result = searcher.search(query=search_string, k=k)
+            # Convert the Pydantic model to a pretty-printed JSON string and print it
+            if result:
+                print(result.model_dump_json(indent=4))
+            else:
+                logger.info("No results found.")
         except Exception as e:
             logger.error(f"{e}")
 

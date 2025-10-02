@@ -1,10 +1,10 @@
+import os
+import json
 import bm25s
 import Stemmer
-import json
-import os
-from core.schemas import MinimalSource, MinimalSearchResults, StudentSearchResults
-from typing import List, Dict, Any
 import logging
+from core.schemas import MinimalSource, MinimalSearchResults
+from core.schemas import StudentSearchResults
 
 
 logging.basicConfig(level=logging.INFO)
@@ -15,6 +15,7 @@ class Searcher:
     """
     A class to handle loading a BM25 index and perform searches
     """
+
     def __init__(self, index_dir: str = "bm25s_indices"):
         """
         """
@@ -23,16 +24,18 @@ class Searcher:
             raise FileNotFoundError("BM25 files missing")
         metadata_path = os.path.join(index_dir, "metadata.json")
         if not os.path.exists(metadata_path):
-            raise FileNotFoundError(f"Metadata file not found at {metadata_path}. Please run the 'index' command first.")
-        self.retriever = bm25s.BM25.load(index_dir, mmap=True, load_corpus=True)
+            raise FileNotFoundError(
+                f"Metadata file not found at {metadata_path}. Please run the 'index' command first.")
+        self.retriever = bm25s.BM25.load(
+            index_dir, mmap=True, load_corpus=True)
         self.stemmer = Stemmer.Stemmer("english")
         self.corpus = self.retriever.corpus
-        logger.info(f"BM25 index and corpus with {len(self.corpus)} documents loaded.")
+        logger.info(
+            f"BM25 index and corpus with {len(self.corpus)} documents loaded.")
 
         with open(metadata_path, "r", encoding="utf-8") as f:
             self.metadata = json.load(f)
         logger.info(f"Loaded metadata for {len(self.metadata)} chunks.")
-
 
     def search(self, query: str, k: int = 5) -> StudentSearchResults:
         """
@@ -43,7 +46,7 @@ class Searcher:
 
         # Get top-k results as a tuple of (doc ids, scores).
         results, scores = self.retriever.retrieve(query_tokens, k=k)
-        
+
         # The documents are returned as a numpy array of shape (n_queries, k)
         retrieved_sources = []
         for i in range(results.shape[1]):
@@ -56,7 +59,7 @@ class Searcher:
                 file_path=meta['file_path'],
                 first_character_index=meta['first_character_index'],
                 last_character_index=meta['last_character_index']
-                )
+            )
             retrieved_sources.append(min_src)
         logger.info(f"min srcs are {len(retrieved_sources)}")
         min_search_res = MinimalSearchResults(
