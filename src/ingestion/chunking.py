@@ -2,11 +2,10 @@ from chonkie import TextChef, MarkdownChef
 from typing import List, Dict, Any
 import logging
 import json
-from file_processing import read_file
+from ingestion.file_processing import read_file
 from chonkie import RecursiveChunker
 from chonkie import CodeChunker
-from schemas import MinimalSource, ChunkSource
-
+from core.schemas import MinimalSource, ChunkSource
 
 
 logger = logging.getLogger(__name__)

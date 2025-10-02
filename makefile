@@ -11,9 +11,6 @@ install:
 		echo "uv project already initialized"; \
 	fi
 
-help:
-	@uv run python -m src --help
-
 index:
 	@uv run python -m src index 
 
@@ -48,5 +45,8 @@ clean:
 
 lint:
 	flake8 src
+
+help:
+	@uv run python -m src --help
 
 PHONY: install run debug clean lint

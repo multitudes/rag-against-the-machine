@@ -2,10 +2,11 @@
 import fire
 import os
 from datetime import datetime
-from file_processing import read_file
-from file_processing import extract_files_from_questions, get_all_files
-from indexing import create_bm25_index
-from chunking import chunk_content
+# Updated imports for the new project structure
+from ingestion.file_processing import extract_files_from_questions, get_all_files
+from ingestion.indexing import create_bm25_index
+from ingestion.chunking import chunk_content
+from retrieval.search import Searcher
 import logging
 
 
@@ -61,7 +62,6 @@ class RagCLI:
         except Exception as e:
             logger.error(f"Ingestion failed: {e}")
             return
-    
 
     def search(self, search_string=None, k=None):
         """
