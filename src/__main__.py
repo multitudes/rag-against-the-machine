@@ -9,6 +9,7 @@ from ingestion.chunking import chunk_content
 from retrieval.search import Searcher
 import logging
 
+logger = logging.getLogger(__name__)
 
 class RagCLI:
     """
@@ -38,7 +39,6 @@ class RagCLI:
         Ingest documents from a repository for indexing.
         Uses the instance variables set during initialization.
         """
-        logger = logging.getLogger(__name__)
         logger.info("Ingesting documents...")
         logger.info(f"Repository path: {self.repo_path}")
         logger.info(f"Ingestion mode: {self.mode}")
@@ -74,7 +74,10 @@ class RagCLI:
             k = self.k
         print(f"Search query: {search_string}")
         print(f"Number of top results to return: {k}")
-        # Implement search logic here
+        try:
+            searcher = Searcher(index_dir="bm25s_indices/")
+        except Exception as e:
+            logger.error(f"{e}")
 
     def search_dataset(self, dataset_path):
         """

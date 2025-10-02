@@ -14,13 +14,13 @@ class Searcher:
     """
     A class to handle loading a BM25 index and perform searches
     """
-
     def __init__(self, index_dir: str = "bm25s_indices"):
         """
         """
         self.retriever = bm25s.BM25.load(index_dir, mmap=True, load_corpus=True)
-        self.stemmer = Stemmer.stemmer("english")
+        self.stemmer = Stemmer.Stemmer("english")
         self.metadata = []
+        self.corpus = []
 
         if not os.path.exists(index_dir):
             raise FileNotFoundError("BM25 files missing")
@@ -28,9 +28,9 @@ class Searcher:
         # 3. Load the corresponding metadata
         metadata_path = os.path.join(index_dir, "metadata.json")
         if not os.path.exists(metadata_path):
-            raise FileNotFoundError(
-                f"Metadata file not found at {metadata_path}. Please run the 'index' command first.")
-        self.metadata = json.load(f)
+            raise FileNotFoundError(f"Metadata file not found at {metadata_path}. Please run the 'index' command first.")
+        with open(metadata_path, "r", encoding="utf-8") as f:
+            self.metadata = json.load(f)
         logger.info(f"Loaded metadata for {len(self.metadata)} chunks.")
 
     def search(self, query: str, k: int = 5) -> List[Dict[str, any]]:
