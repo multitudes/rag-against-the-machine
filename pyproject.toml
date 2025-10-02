@@ -11,7 +11,10 @@ dependencies = [
     "langchain",
     "bm25s",
     "chromadb",
-    "chonkie",
+    "chonkie[all]",
+    "chonkie[hub]",
+    "chonkie[chroma]",
+    "chonkie[code]"
 ]
 
 [project.scripts]

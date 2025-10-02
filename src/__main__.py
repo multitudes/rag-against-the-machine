@@ -4,6 +4,8 @@ import os
 from datetime import datetime
 from file_processing import read_file
 from file_processing import extract_files_from_questions, get_all_files
+
+from chunking import chunk_content
 import logging
 
 
@@ -30,7 +32,7 @@ class RagCLI:
         self.k = k
         self.search_dataset_path = search_dataset_path
 
-    def ingest(self):
+    def index(self):
         """
         Ingest documents from a repository for indexing.
         Uses the instance variables set during initialization.
@@ -50,8 +52,7 @@ class RagCLI:
 
             for file_path in files_to_process:
                 logger.info(f"Processing file: {file_path}")
-                # 1. Read file content
-                content = read_file(file_path)
+                chunks = chunk_content(file_path)
                 
                 # # 2. Chunk the content (using chonkie)
                 # chunks = self.chunk_content(content)

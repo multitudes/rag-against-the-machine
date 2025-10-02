@@ -14,8 +14,8 @@ install:
 help:
 	@uv run python -m src --help
 
-ingest:
-	@uv run python -m src ingest 
+index:
+	@uv run python -m src index 
 
 search:
 	@uv run python -m src search "OpenAI compatible server" --k 10
