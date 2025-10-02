@@ -216,3 +216,5 @@ bm25s_indices/params.index.json
 bm25s_indices/stopwords.tokenizer.json
 bm25s_indices/vocab.index.json
 bm25s_indices/vocab.tokenizer.json
+bm25s_indices/corpus.jsonl
+bm25s_indices/corpus.mmindex.json

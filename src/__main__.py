@@ -76,6 +76,7 @@ class RagCLI:
         print(f"Number of top results to return: {k}")
         try:
             searcher = Searcher(index_dir="bm25s_indices/")
+            
         except Exception as e:
             logger.error(f"{e}")
 

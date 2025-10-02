@@ -46,7 +46,7 @@ def create_bm25_index(all_chunks: List, index_dir: str):
     logger.info("Indexing documents with BM25...")
     retriever.index(corpus_tokens)
     tokenizer = bm25s.tokenization.Tokenizer(stemmer=stemmer)
-    retriever.save(index_dir)
+    retriever.save(index_dir, corpus=corpus)
     tokenizer.save_vocab(index_dir)
     tokenizer.save_stopwords(index_dir)
     logger.info(f"Saving BM25 index to {index_dir}...")

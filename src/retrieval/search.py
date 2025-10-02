@@ -22,6 +22,7 @@ class Searcher:
         self.metadata = []
         self.corpus = []
 
+        logger.info("Using memory-mapped index (mmap) to reduce memory usage.")
         if not os.path.exists(index_dir):
             raise FileNotFoundError("BM25 files missing")
 
