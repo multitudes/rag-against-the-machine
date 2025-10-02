@@ -208,3 +208,11 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 .DS_Store
+bm25s_indices/data.csc.index.npy
+bm25s_indices/indices.csc.index.npy
+bm25s_indices/indptr.csc.index.npy
+bm25s_indices/metadata.json
+bm25s_indices/params.index.json
+bm25s_indices/stopwords.tokenizer.json
+bm25s_indices/vocab.index.json
+bm25s_indices/vocab.tokenizer.json

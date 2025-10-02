@@ -11,6 +11,12 @@ class MinimalSource(BaseModel):
     last_character_index: int
 
 
+class ChunkSource(BaseModel):
+    """Represents a chunk of text and its minimal source."""
+    text: str
+    source: MinimalSource
+
+
 # Question Models
 class UnansweredQuestion(BaseModel):
     """Represents an unanswered question."""

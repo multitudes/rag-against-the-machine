@@ -5,7 +5,7 @@ import json
 from file_processing import read_file
 from chonkie import RecursiveChunker
 from chonkie import CodeChunker
-from chonkie import ChromaHandshake
+from schemas import MinimalSource, ChunkSource
 
 
 
@@ -20,7 +20,7 @@ def get_docs_for_file(file_path):
     return chef.process(file_path), ext
 
 
-def chunk_content(file_path: str, chunk_size: int = 1000, overlap: int = 200) -> List[Dict[str, Any]]:
+def chunk_content(file_path: str, chunk_size: int = 1000, overlap: int = 200) -> List[ChunkSource]:
     """
     Chunk text content into smaller pieces using chonkie.
     
@@ -64,26 +64,41 @@ def chunk_content(file_path: str, chunk_size: int = 1000, overlap: int = 200) ->
         # You can now process the chunks
         # For now, let's just log the number of chunks found
         logger.info(f"Found {len(chunks)} chunks in {file_path}.")
+        complete_chunks = []
+        for chunk in chunks:
+            source_obj = MinimalSource(
+                file_path=file_path,
+                first_character_index=chunk.start_index,
+                last_character_index=chunk.end_index
+            )
+            complete_chunks.append(
+                ChunkSource(
+                    text=(chunk.text), 
+                    source=source_obj)
+                )
+        
+        return complete_chunks
 
-        # --- Let's inspect the first chunk to see its structure ---
-        if chunks:
-            first_chunk = chunks[0]
-            logger.info("--- Inspecting the first chunk ---")
-            logger.info(f"Chunk ID: {first_chunk.id}")
-            logger.info(f"Chunk Text: ...\n{first_chunk.text[:20]}...\n\n")
-            logger.info(f"Chunk Start Index: {first_chunk.start_index}\n\n")
-            logger.info(f"Chunk End Index: {first_chunk.end_index}\n\n")
-            logger.info(f"Chunk Token Count: {first_chunk.token_count}\n\n")
+
+        # # --- Let's inspect the first chunk to see its structure ---
+        # if chunks:
+        #     first_chunk = chunks[0]
+        #     logger.info("--- Inspecting the first chunk ---")
+        #     logger.info(f"Chunk ID: {first_chunk.id}")
+        #     logger.info(f"Chunk Text: ...\n{first_chunk.text[:20]}...\n\n")
+        #     logger.info(f"Chunk Start Index: {first_chunk.start_index}\n\n")
+        #     logger.info(f"Chunk End Index: {first_chunk.end_index}\n\n")
+        #     logger.info(f"Chunk Token Count: {first_chunk.token_count}\n\n")
             
-            # The 'context' can sometimes be None if not generated
-            if first_chunk.context:
-                logger.info(f"Chunk Context: {first_chunk.context}")
+        #     # The 'context' can sometimes be None if not generated
+        #     if first_chunk.context:
+        #         logger.info(f"Chunk Context: {first_chunk.context}")
 
-            # You can easily convert the chunk to a dictionary
-            chunk_dict = first_chunk.to_dict()
-            pretty_json = json.dumps(chunk_dict, indent=4)
-            logger.info(f"Chunk as pretty dictionary:\n{pretty_json}")
-            logger.info("------------------------------------")
+        #     # You can easily convert the chunk to a dictionary
+        #     chunk_dict = first_chunk.to_dict()
+        #     pretty_json = json.dumps(chunk_dict, indent=4)
+        #     logger.info(f"Chunk as pretty dictionary:\n{pretty_json}")
+        #     logger.info("------------------------------------")
     
 
     except Exception as e:

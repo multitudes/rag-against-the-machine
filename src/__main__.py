@@ -50,15 +50,14 @@ class RagCLI:
                 # Get all files in repository
                 files_to_process = get_all_files(self.repo_path)
 
+            chunks = []
             for file_path in files_to_process:
                 logger.info(f"Processing file: {file_path}")
-                chunks = chunk_content(file_path)
-                create_bm25_index(chunks, "bm25s_indices/")
+                chunks += chunk_content(file_path)
+            
+            # # 3. Create searchable index (using bm25s)
+            create_bm25_index(chunks, "bm25s_indices/")
 
-                # # 3. Create searchable index (using bm25s)
-                # self.index_chunks(chunks, file_path)
-                # # 4. Store in vector database (using chromadb)
-                # self.store_chunks(chunks, file_path)
         except Exception as e:
             logger.error(f"Ingestion failed: {e}")
             return
