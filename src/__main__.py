@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from file_processing import read_file
 from file_processing import extract_files_from_questions, get_all_files
-
+from indexing import create_bm25_index
 from chunking import chunk_content
 import logging
 
@@ -53,9 +53,8 @@ class RagCLI:
             for file_path in files_to_process:
                 logger.info(f"Processing file: {file_path}")
                 chunks = chunk_content(file_path)
-                
-                # # 2. Chunk the content (using chonkie)
-                # chunks = self.chunk_content(content)
+                create_bm25_index(chunks, "bm25s_indices/")
+
                 # # 3. Create searchable index (using bm25s)
                 # self.index_chunks(chunks, file_path)
                 # # 4. Store in vector database (using chromadb)

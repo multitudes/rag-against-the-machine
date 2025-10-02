@@ -9,12 +9,10 @@ dependencies = [
     "fire",
     "tqdm",
     "langchain",
-    "bm25s",
     "chromadb",
     "chonkie[all]",
-    "chonkie[hub]",
-    "chonkie[chroma]",
-    "chonkie[code]"
+    "bm25s",
+    "PyStemmer",
 ]
 
 [project.scripts]
