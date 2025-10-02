@@ -74,9 +74,11 @@ class RagCLI:
             k = self.k
         print(f"Search query: {search_string}")
         print(f"Number of top results to return: {k}")
+        search_string = "What command is used to start the vLLM OpenAI-compatible server?"
+
         try:
             searcher = Searcher(index_dir="bm25s_indices/")
-            
+            searcher.search(query=search_string, k=5)
         except Exception as e:
             logger.error(f"{e}")
 
