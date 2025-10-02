@@ -218,3 +218,4 @@ bm25s_indices/vocab.index.json
 bm25s_indices/vocab.tokenizer.json
 bm25s_indices/corpus.jsonl
 bm25s_indices/corpus.mmindex.json
+data/results/search_results_2025-10-02.json

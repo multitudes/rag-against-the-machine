@@ -1,12 +1,14 @@
 # src/__main__.py
-import fire
 import os
+import fire
+import json
 from datetime import datetime
 # Updated imports for the new project structure
 from ingestion.file_processing import extract_files_from_questions, get_all_files
 from ingestion.indexing import create_bm25_index
 from ingestion.chunking import chunk_content
 from retrieval.search import Searcher
+from core.schemas import UnansweredQuestion, StudentSearchResults
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,13 +21,12 @@ class RagCLI:
     """
     def __init__(self,
                  repo_path="assets/vllm-0.10.1",
-                #  mode="full",
+                 #mode="full",
                  mode='selective',
                  questions_file=("data/questions.tsv"),
                  search_string="OpenAI compatible server",
                  k=10,
-                 search_dataset_path=("data/datasets/UnansweredQuestions/",
-                                      "Dataset_2025-09-21_valid.json")
+                 search_dataset_path=("data/datasets/UnansweredQuestions/Dataset_2025-09-21_valid_unanswered.json")
                  ):
         self.repo_path = repo_path
         self.questions_file = questions_file
@@ -78,8 +79,13 @@ class RagCLI:
 
         try:
             searcher = Searcher(index_dir="bm25s_indices/")
-            result = searcher.search(query=search_string, k=k)
-            # Convert the Pydantic model to a pretty-printed JSON string and print it
+            min_search_res = searcher.search_one(query=search_string, k=k)
+            result = StudentSearchResults(
+               search_results=[min_search_res],
+                k=k
+            )
+            # Convert the Pydantic model to a pretty-printed JSON string 
+            # and print it
             if result:
                 print(result.model_dump_json(indent=4))
             else:
@@ -91,10 +97,31 @@ class RagCLI:
         """
         Search using a dataset of questions.
         """
+        searcher = Searcher(index_dir="bm25s_indices/")
         if dataset_path is None:
             dataset_path = self.search_dataset_path
-        print(f"Searching using dataset: {dataset_path}")
-        # Implement dataset search logic here
+        logger.info(f"Searching using dataset: {dataset_path}")
+        try:
+            with open(dataset_path, 'r',encoding='utf-8') as f:
+                data = json.load(f)
+            questions_data = data.get("rag_questions", [])
+            unanswered = [UnansweredQuestion(**item) for item in questions_data]
+            result = searcher.search_dataset(unanswered)
+            if result:
+                output_dir = "data/results"
+                os.makedirs(output_dir, exist_ok=True)
+                current_date = datetime.now().strftime("%Y-%m-%d")
+                output_filename = f"search_results_{current_date}.json"
+                output_path = os.path.join(output_dir, output_filename)
+
+                with open(output_path, 'w', encoding='utf-8') as f:
+                    f.write(result.model_dump_json(indent=4))
+                logger.info(f"Search results saved to {output_path}")
+            else:
+                logger.info("No results found.")
+            return result
+        except Exception as e:
+            logger.error(f"Failed collecting questions from dataset: {e}")
 
     def evaluate(self, search_results_path, ground_truth_path):
         """

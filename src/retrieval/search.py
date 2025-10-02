@@ -4,7 +4,7 @@ import bm25s
 import Stemmer
 import logging
 from core.schemas import MinimalSource, MinimalSearchResults
-from core.schemas import StudentSearchResults
+from core.schemas import StudentSearchResults, UnansweredQuestion
 
 
 logging.basicConfig(level=logging.INFO)
@@ -37,7 +37,8 @@ class Searcher:
             self.metadata = json.load(f)
         logger.info(f"Loaded metadata for {len(self.metadata)} chunks.")
 
-    def search(self, query: str, k: int = 5) -> StudentSearchResults:
+
+    def search_one(self, query: str, k: int = 5) -> MinimalSearchResults:
         """
         Performs a search and returns a structured StudentSearchResults object.
         """
@@ -62,11 +63,24 @@ class Searcher:
             )
             retrieved_sources.append(min_src)
         logger.info(f"min srcs are {len(retrieved_sources)}")
-        min_search_res = MinimalSearchResults(
-            question_id="",
+        return MinimalSearchResults(
+            question_id="q0",
             retrieved_sources=retrieved_sources
         )
+
+    def search_dataset(self, questions: UnansweredQuestion, k: int = 5) -> StudentSearchResults:
+        """
+        Performs a search and returns a structured StudentSearchResults object.
+        """
+        logger.info("searching the dataset... ")
+        search_results = []
+        for question in questions:
+            logger.info(f"Retrieving top-{k} results for question: '{question.question}'")
+            result = self.search_one(query=question.question, k=k)
+            result.question_id = question.question_id
+            search_results.append(result)
+        logger.info(f"Found {len(search_results)} results")
         return StudentSearchResults(
-            search_results=[min_search_res],
+            search_results=search_results,
             k=k
         )

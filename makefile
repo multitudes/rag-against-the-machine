@@ -19,7 +19,7 @@ search:
 
 search_dataset:
 	@uv run python -m src search_dataset \
-	data/datasets/UnansweredQuestions/Dataset_2025-09-21_valid.json
+	data/datasets/UnansweredQuestions/Dataset_2025-09-21_valid_unanswered.json
 
 evaluate:
 	@uv run python -m src evaluate \
