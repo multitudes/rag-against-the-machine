@@ -10,8 +10,12 @@ from ingestion.chunking import chunk_content
 from retrieval.search import Searcher
 from core.schemas import UnansweredQuestion, StudentSearchResults
 import logging
+from core.ollama_request import OllamaRequest, Message
+
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+# logger.setLevel(logging.ERROR)
 
 class RagCLI:
     """
@@ -87,7 +91,7 @@ class RagCLI:
             # Convert the Pydantic model to a pretty-printed JSON string 
             # and print it
             if result:
-                print(result.model_dump_json(indent=4))
+                logger.info(result.model_dump_json(indent=4))
             else:
                 logger.info("No results found.")
         except Exception as e:
@@ -117,6 +121,7 @@ class RagCLI:
                 with open(output_path, 'w', encoding='utf-8') as f:
                     f.write(result.model_dump_json(indent=4))
                 logger.info(f"Search results saved to {output_path}")
+                print(result.model_dump_json(indent=4))
             else:
                 logger.info("No results found.")
             return result
@@ -170,7 +175,16 @@ class RagCLI:
         """
         print("Answering a question using RAG...")
         print(f"Question: {question}")
-        # Implement single question answering logic here
+        # get context
+        searcher = Searcher(index_dir="bm25s_indices/")
+        search_results = searcher.search_one(query=question, k=k)
+        logger.info(f"{search_results.question_id} \n {search_results.retrieved_sources}")
+        retrieved_sources = search_results.retrieved_sources
+        # context_chunks = [source.content for source in search_results.retrieved_sources]
+        # logger.info(f"got {len(context_chunks)} context chunks")
+        question = UnansweredQuestion(question = question)
+        # logger.info(question.model_dump_json(indent=4))
+
         print("✅ Question answered!")
 
 

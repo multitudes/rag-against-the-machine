@@ -10,6 +10,7 @@ install:
 	else \
 		echo "uv project already initialized"; \
 	fi
+	UV_LINK_MODE=copy uv sync
 
 index:
 	@uv run python -m src index 
