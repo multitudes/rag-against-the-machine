@@ -11,11 +11,13 @@ from retrieval.search import Searcher
 from core.schemas import UnansweredQuestion, StudentSearchResults
 import logging
 from core.ollama_request import OllamaRequest, Message
+import requests
 
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 # logger.setLevel(logging.ERROR)
+
 
 class RagCLI:
     """
@@ -85,7 +87,7 @@ class RagCLI:
             searcher = Searcher(index_dir="bm25s_indices/")
             min_search_res = searcher.search_one(query=search_string, k=k)
             result = StudentSearchResults(
-               search_results=[min_search_res],
+                search_results=[min_search_res],
                 k=k
             )
             # Convert the Pydantic model to a pretty-printed JSON string 
@@ -179,7 +181,61 @@ class RagCLI:
         searcher = Searcher(index_dir="bm25s_indices/")
         search_results = searcher.search_one(query=question, k=k)
         logger.info(f"{search_results.question_id} \n {search_results.retrieved_sources}")
-        retrieved_sources = search_results.retrieved_sources
+
+        # extract chunks
+        context_chunks = []
+        
+        for source in search_results.retrieved_sources:
+            try:
+                with open(source.file_path, 'r', encoding='utf-8') as f:
+                    f.seek(source.first_character_index)
+                    content = f.read(source.last_character_index - source.first_character_index)
+                    context_chunks.append(content)
+            except Exception as e:
+                logger.error(f"Error reading file {source.file_path}: {e}")
+        if not context_chunks:
+            logger.error("Could not retrieve any content. Abort")
+            return
+        
+        logger.info(f"Retrieved {len(context_chunks)} chunks")
+
+        logger.info("➡️ Generating answer...")
+        context_str = "\n\n---\n\n".join(context_chunks)
+        
+        prompt = f"""
+        Use the following context to answer the question. 
+        If the answer is not in the context, say you don't know.
+
+        Context:
+        {context_str}
+
+        Question: {question}
+        """
+
+        messages = [Message(role="user", content=prompt)]
+        try:
+            data = OllamaRequest(
+                model="qwen3:0.6b",
+                messages=messages,
+                tools=[],
+                stream=False,
+            )
+            api_url = "http://localhost:11434/api/chat"
+            response = requests.post(
+                api_url, 
+                data=data.model_dump_json(), 
+                headers={"Content-Type": "application/json"}
+            )
+            response.raise_for_status()  # Raise an exception for bad status codes
+            response_data = response.json()
+
+            print("\n✅ Answer:\n")
+            print(response_data['message']['content'])
+
+        except Exception as e:
+            logger.error(f"Failed to get answer from LLM: {e}")
+
+
         # context_chunks = [source.content for source in search_results.retrieved_sources]
         # logger.info(f"got {len(context_chunks)} context chunks")
         question = UnansweredQuestion(question = question)
