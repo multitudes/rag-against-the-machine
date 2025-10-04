@@ -1,8 +1,6 @@
 from chonkie import TextChef, MarkdownChef
-from typing import List, Dict, Any
+from typing import List
 import logging
-import json
-from ingestion.file_processing import read_file
 from chonkie import RecursiveChunker
 from chonkie import CodeChunker
 from core.schemas import MinimalSource, ChunkSource
@@ -19,15 +17,19 @@ def get_docs_for_file(file_path):
     return chef.process(file_path), ext
 
 
-def chunk_content(file_path: str, chunk_size: int = 1000, overlap: int = 200) -> List[ChunkSource]:
+def chunk_content(
+        file_path: str,
+        chunk_size: int = 2048,
+        overlap: int = 200
+        ) -> List[ChunkSource]:
     """
     Chunk text content into smaller pieces using chonkie.
-    
+
     Args:
         file_path: Path to the file to chunk.
         chunk_size: Size of each chunk.
         overlap: Overlap between chunks.
-        
+
     Returns:
         List of chunk dictionaries.
     """
@@ -51,15 +53,15 @@ def chunk_content(file_path: str, chunk_size: int = 1000, overlap: int = 200) ->
         else:
             logger.info(f"Using code chunking recipe for {file_path}")
             chunker = CodeChunker(
-                language="python",                 # Specify the programming language
-                tokenizer_or_token_counter="character", # Default tokenizer (or use "gpt2", etc.)
-                chunk_size=2048,                    # Maximum tokens per chunk
-                include_nodes=False                # Optionally include AST nodes in output
+                language="python",
+                tokenizer_or_token_counter="character",
+                chunk_size=chunk_size,  # Maximum tokens per chunk
+                include_nodes=False  # Optionally include AST nodes in output
             )
-        
+
         # Chunk the content that the chef extracted
         chunks = chunker.chunk(doc)
-        
+
         # You can now process the chunks
         # For now, let's just log the number of chunks found
         logger.info(f"Found {len(chunks)} chunks in {file_path}.")
@@ -72,36 +74,12 @@ def chunk_content(file_path: str, chunk_size: int = 1000, overlap: int = 200) ->
             )
             complete_chunks.append(
                 ChunkSource(
-                    text=(chunk.text), 
+                    text=(chunk.text),
                     source=source_obj)
-                )
-        
+            )
         return complete_chunks
-
-
-        # # --- Let's inspect the first chunk to see its structure ---
-        # if chunks:
-        #     first_chunk = chunks[0]
-        #     logger.info("--- Inspecting the first chunk ---")
-        #     logger.info(f"Chunk ID: {first_chunk.id}")
-        #     logger.info(f"Chunk Text: ...\n{first_chunk.text[:20]}...\n\n")
-        #     logger.info(f"Chunk Start Index: {first_chunk.start_index}\n\n")
-        #     logger.info(f"Chunk End Index: {first_chunk.end_index}\n\n")
-        #     logger.info(f"Chunk Token Count: {first_chunk.token_count}\n\n")
-            
-        #     # The 'context' can sometimes be None if not generated
-        #     if first_chunk.context:
-        #         logger.info(f"Chunk Context: {first_chunk.context}")
-
-        #     # You can easily convert the chunk to a dictionary
-        #     chunk_dict = first_chunk.to_dict()
-        #     pretty_json = json.dumps(chunk_dict, indent=4)
-        #     logger.info(f"Chunk as pretty dictionary:\n{pretty_json}")
-        #     logger.info("------------------------------------")
-    
 
     except Exception as e:
         logger.error(f"Could not process file {file_path}: {e} ")
-    
-    return chunks
 
+    return chunks

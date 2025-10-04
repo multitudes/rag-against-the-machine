@@ -39,7 +39,7 @@ def extract_files_from_questions(questions_file: str):
                 parts = line.strip().split('\t')
                 if len(parts) > abs(file_path_idx):
                     file_paths.add(parts[file_path_idx])
-                
+
         logger.info(f"Extracted {len(file_paths)} unique files\
                      from questions.tsv")
         return list(file_paths)

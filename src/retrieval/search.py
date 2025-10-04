@@ -25,7 +25,8 @@ class Searcher:
         metadata_path = os.path.join(index_dir, "metadata.json")
         if not os.path.exists(metadata_path):
             raise FileNotFoundError(
-                f"Metadata file not found at {metadata_path}. Please run the 'index' command first.")
+                f"Metadata file not found at {metadata_path}.\
+                Please run the 'index' command first.")
         self.retriever = bm25s.BM25.load(
             index_dir, mmap=True, load_corpus=True)
         self.stemmer = Stemmer.Stemmer("english")
@@ -36,7 +37,6 @@ class Searcher:
         with open(metadata_path, "r", encoding="utf-8") as f:
             self.metadata = json.load(f)
         logger.info(f"Loaded metadata for {len(self.metadata)} chunks.")
-
 
     def search_one(self, query: str, k: int = 5) -> MinimalSearchResults:
         """
@@ -68,14 +68,20 @@ class Searcher:
             retrieved_sources=retrieved_sources
         )
 
-    def search_dataset(self, questions: UnansweredQuestion, k: int = 5) -> StudentSearchResults:
+    def search_dataset(
+            self,
+            questions: UnansweredQuestion,
+            k: int = 5
+    ) -> StudentSearchResults:
         """
         Performs a search and returns a structured StudentSearchResults object.
         """
         logger.info("searching the dataset... ")
         search_results = []
         for question in questions:
-            logger.info(f"Retrieving top-{k} results for question: '{question.question}'")
+            logger.info(
+                f"Retrieving top-{k} results for question: "
+                f"'{question.question}'")
             result = self.search_one(query=question.question, k=k)
             result.question_id = question.question_id
             search_results.append(result)

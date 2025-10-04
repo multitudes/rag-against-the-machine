@@ -3,7 +3,6 @@ import Stemmer
 import logging
 import json
 from typing import List
-from core.schemas import MinimalSource
 import os
 
 
@@ -33,15 +32,20 @@ def create_bm25_index(all_chunks: List, index_dir: str):
     metadata_path = os.path.join(index_dir, "metadata.json")
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=4)
-    logger.info(f"Metadata for {len(metadata)} chunks saved to {metadata_path}")
+    logger.info(f"Metadata for {len(metadata)}\
+                chunks saved to {metadata_path}")
 
     logger.info(f"Creating BM25 index from {len(corpus)} total chunks...")
-    
+
     # optional: create a stemmer
     stemmer = Stemmer.Stemmer("english")
-    
+
     # Tokenize the corpus and only keep the ids (faster and saves memory)
-    corpus_tokens = bm25s.tokenize(corpus, stopwords="en", stemmer=stemmer, show_progress=True)
+    corpus_tokens = bm25s.tokenize(
+        corpus, stopwords="en",
+        stemmer=stemmer,
+        show_progress=True
+    )
     retriever = bm25s.BM25()
     logger.info("Indexing documents with BM25...")
     retriever.index(corpus_tokens)
@@ -50,21 +54,8 @@ def create_bm25_index(all_chunks: List, index_dir: str):
     tokenizer.save_vocab(index_dir)
     tokenizer.save_stopwords(index_dir)
     logger.info(f"Saving BM25 index to {index_dir}...")
-    
+
     # get memory usage
     mem_use = bm25s.utils.benchmark.get_max_memory_usage()
     logger.info(f"Peak memory usage: {mem_use:.2f} GB")
     logger.info("BM25 index saved successfully.")
-
- 
-    # query = "What command is used to start the vLLM OpenAI-compatible server?"
-    # query_tokens = bm25s.tokenize(query, stemmer=stemmer)
-
-    # # Get top-k results as a tuple of (doc ids, scores). Both are arrays of shape (n_queries, k).
-    # # To return docs instead of IDs, set the `corpus=corpus` parameter.
-    # results, scores = retriever.retrieve(query_tokens, k=2)
-
-    # for i in range(results.shape[1]):
-    #     doc, score = results[0, i], scores[0, i]
-    #     print(f"Rank {i+1} (score: {score:.2f}): {doc}")
-
