@@ -8,16 +8,16 @@ from ingestion.file_processing import extract_files_from_questions, get_all_file
 from ingestion.indexing import create_bm25_index
 from ingestion.chunking import chunk_content
 from retrieval.search import Searcher
-from core.schemas import UnansweredQuestion, StudentSearchResults
+from core.schemas import UnansweredQuestion, StudentSearchResults, MinimalAnswer, StudentSearchResultsAndAnswer
 import logging
 from core.ollama_request import OllamaRequest, Message
 import requests
 
+API_URL = "http://localhost:11434/api/chat"
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 # logger.setLevel(logging.ERROR)
-
 
 class RagCLI:
     """
@@ -220,25 +220,44 @@ class RagCLI:
                 tools=[],
                 stream=False,
             )
-            api_url = "http://localhost:11434/api/chat"
             response = requests.post(
-                api_url, 
+                API_URL, 
                 data=data.model_dump_json(), 
                 headers={"Content-Type": "application/json"}
             )
             response.raise_for_status()  # Raise an exception for bad status codes
             response_data = response.json()
+            answer_content = response_data['message']['content']
 
             print("\n✅ Answer:\n")
-            print(response_data['message']['content'])
+            print(answer_content)
+
+            # Create MinimalAnswer by combining search results and the new answer
+            minimal_answer = MinimalAnswer(
+                question_id=search_results.question_id,
+                retrieved_sources=search_results.retrieved_sources,
+                answer=answer_content
+            )
+
+            final_result = StudentSearchResultsAndAnswer(
+                search_results=[minimal_answer],
+                k=k
+            )
+            output_dir = "data/output"
+            os.makedirs(output_dir, exist_ok=True)
+            current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            outputfilename = f"aswer_result_{current_date}.json"
+            output_path = os.path.join(output_dir, outputfilename)
+
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(final_result.model_dump_json(indent=4))
+            logger.info(f"Answer and sources saved to {output_path}")
 
         except Exception as e:
             logger.error(f"Failed to get answer from LLM: {e}")
-
-
         # context_chunks = [source.content for source in search_results.retrieved_sources]
         # logger.info(f"got {len(context_chunks)} context chunks")
-        question = UnansweredQuestion(question = question)
+        question = UnansweredQuestion(question=question)
         # logger.info(question.model_dump_json(indent=4))
 
         print("✅ Question answered!")
