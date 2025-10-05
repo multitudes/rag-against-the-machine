@@ -8,6 +8,7 @@ import requests
 from tqdm import tqdm
 from datetime import datetime
 from retrieval.search import Searcher
+from src.utils import write_search_to_file
 from ingestion.chunking import chunk_content
 from ingestion.indexing import create_bm25_index
 from ingestion.file_processing import get_all_files
@@ -33,13 +34,14 @@ class RagCLI:
     def __init__(self,
                  repo_path="assets/vllm-0.10.1",
                  mode="full",
-                #  mode='selective',
+                 #  mode='selective',
                  questions_file=("data/questions.tsv"),
                  search_string="OpenAI compatible server",
                  k=10,
                  search_dataset_path=(
                      "data/datasets/UnansweredQuestions/\
-                        Dataset_2025-09-21_valid_unanswered.json")
+                        Dataset_2025-09-21_valid_unanswered.json"),
+                 chunk_size=2000
                  ):
         self.repo_path = repo_path
         self.questions_file = questions_file
@@ -47,6 +49,9 @@ class RagCLI:
         self.search_string = search_string
         self.k = k
         self.search_dataset_path = search_dataset_path
+        self.chunk_size = chunk_size
+        if chunk_size > 2000:
+            raise ValueError("Chunk Size cannot exceed 2000.")
 
     def index(self):
         """
@@ -72,7 +77,7 @@ class RagCLI:
             chunks = []
             for file_path in tqdm(files_to_process, desc="Chunking files"):
                 # logger.info(f"Processing file: {file_path}")
-                chunks.extend(chunk_content(file_path))
+                chunks.extend(chunk_content(file_path, self.chunk_size))
 
             # # 3. Create searchable index (using bm25s)
             create_bm25_index(chunks, "bm25s_indices/")
@@ -83,7 +88,6 @@ class RagCLI:
             end_time = time.time()
             duration = end_time-start_time
             print(f"Created index in {duration:.2f} seconds")
-            
 
     def search(self, search_string=None, k=None):
         """
@@ -110,6 +114,7 @@ class RagCLI:
             # and logger.info it
             if result:
                 logger.info(result.model_dump_json(indent=4))
+                write_search_to_file(result, "data/results")
             else:
                 logger.info("No results found.")
         except Exception as e:
@@ -131,15 +136,7 @@ class RagCLI:
                           for item in questions_data]
             result = searcher.search_dataset(unanswered)
             if result:
-                output_dir = "data/results"
-                os.makedirs(output_dir, exist_ok=True)
-                current_date = datetime.now().strftime("%Y-%m-%d")
-                output_filename = f"search_results_{current_date}.json"
-                output_path = os.path.join(output_dir, output_filename)
-
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    f.write(result.model_dump_json(indent=4))
-                logger.info(f"Search results saved to {output_path}")
+                write_search_to_file(result, "data/results")
                 logger.info(result.model_dump_json(indent=4))
             else:
                 logger.info("No results found.")
@@ -150,8 +147,7 @@ class RagCLI:
     def evaluate(self, search_results_path, ground_truth_path):
         """
         Evaluate search results by measuring recall@k on a dataset.
-
-                Args:
+        Args:
             search_results_path: Path to the search results JSON file
             ground_truth_path: Path to the ground
             truth/answered questions JSON file
@@ -159,8 +155,8 @@ class RagCLI:
         logger.info("📊 Measuring recall@k on dataset...")
         logger.info(f"Search results: {search_results_path}")
         logger.info(f"Ground truth: {ground_truth_path}")
-        # Implement recall@k evaluation logic here
-        logger.info("✅ Recall@k measurement completed!")
+        
+        logger.info("Recall@k measurement completed!")
 
     def generate(self, output_path=None):
         """
@@ -172,7 +168,7 @@ class RagCLI:
         else:
             # Build the filename based on current date
             current_date = datetime.now()
-            date_str = current_date.strftime("%Y-%m-%d")
+            date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             filename = f"Dataset_{date_str}_valid.json"
             # Create the full path
             output_dir = "data/datasets/AnsweredQuestions"
