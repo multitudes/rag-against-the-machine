@@ -31,12 +31,12 @@ class RagCLI:
     """
 
     def __init__(self,
-                 repo_path="assets/vllm-0.10.1",
+                 repo_path="data/raw/vllm-0.10.1",
                  mode="full",
                  #  mode='selective',
                  questions_file=("data/questions.tsv"),
                  search_string="OpenAI compatible server",
-                 k=10,
+                 k=5,
                  search_dataset_path=(
                      "data/datasets/UnansweredQuestions/\
                         Dataset_2025-09-21_valid_unanswered.json"),
@@ -214,7 +214,6 @@ class RagCLI:
             logger.info(f"Output will be saved to: {output_path}")
         else:
             # Build the filename based on current date
-            current_date = datetime.now()
             date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             filename = f"Dataset_{date_str}_valid.json"
             # Create the full path
