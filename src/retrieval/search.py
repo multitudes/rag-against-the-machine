@@ -6,8 +6,6 @@ import logging
 from core.schemas import MinimalSource, MinimalSearchResults
 from core.schemas import StudentSearchResults, UnansweredQuestion
 
-
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 

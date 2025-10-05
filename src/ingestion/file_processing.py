@@ -1,9 +1,6 @@
 import os
-from pathlib import Path
 import logging
-# import json
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -47,23 +44,23 @@ def extract_files_from_questions(questions_file: str):
         raise
 
 
-def get_all_files(repo_path):
+def get_all_files(repo_path: str) -> list[str]:
     """
-    Get all relevant files from the repository
+    Get all files from the repository, skipping common temporary directories.
     """
-    file_extensions = {'.py', '.md', '.rst', '.txt', '.json', '.yaml',
-                       '.yml', '.toml'}
     files = []
+    excluded_dirs = ['__pycache__', 'node_modules', '.git']
 
     for root, dirs, filenames in os.walk(repo_path):
-        # skip directories we dont need
-        dirs[:] = [d for d in dirs if not d.startswith('.') and
-                   d not in ['__pycache__', 'node_modules', '.git']]
+        # Modify dirs in-place to skip excluded directories
+        dirs[:] = [d for d in dirs if not d.startswith('.') 
+                   and d not in excluded_dirs]
 
         for filename in filenames:
-            file_path = os.path.join(root, filename)
-            if Path(filename).suffix.lower() in file_extensions:
-                files.append(file_path)
+            # Skip hidden files
+            if filename.startswith('.'):
+                continue
+            files.append(os.path.join(root, filename))
 
-    logger.info(f"found {len(files)} files to process")
+    logger.info(f"Found {len(files)} files to process in {repo_path}")
     return files

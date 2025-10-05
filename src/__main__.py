@@ -2,22 +2,24 @@
 import os
 import fire
 import json
+import time
 import logging
 import requests
+from tqdm import tqdm
 from datetime import datetime
-from ingestion.file_processing import extract_files_from_questions
-from ingestion.file_processing import get_all_files
-from ingestion.indexing import create_bm25_index
-from ingestion.chunking import chunk_content
 from retrieval.search import Searcher
+from ingestion.chunking import chunk_content
+from ingestion.indexing import create_bm25_index
+from ingestion.file_processing import get_all_files
+from core.ollama_request import OllamaRequest, Message
+from ingestion.file_processing import extract_files_from_questions
 from core.schemas import UnansweredQuestion, StudentSearchResults
 from core.schemas import StudentSearchResultsAndAnswer, MinimalAnswer
-from core.ollama_request import OllamaRequest, Message
 
 API_URL = "http://localhost:11434/api/chat"
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.ERROR)
 # logger.setLevel(logging.ERROR)
 
 
@@ -30,8 +32,8 @@ class RagCLI:
 
     def __init__(self,
                  repo_path="assets/vllm-0.10.1",
-                 # mode="full",
-                 mode='selective',
+                 mode="full",
+                #  mode='selective',
                  questions_file=("data/questions.tsv"),
                  search_string="OpenAI compatible server",
                  k=10,
@@ -55,6 +57,8 @@ class RagCLI:
         logger.info(f"Repository path: {self.repo_path}")
         logger.info(f"Ingestion mode: {self.mode}")
         logger.info(f"Questions file: {self.questions_file}")
+
+        start_time = time.time()
         try:
             if self.mode == "selective":
                 # Load questions to find which files to process
@@ -62,19 +66,24 @@ class RagCLI:
                     self.questions_file)
             else:
                 # Get all files in repository
+
                 files_to_process = get_all_files(self.repo_path)
 
             chunks = []
-            for file_path in files_to_process:
-                logger.info(f"Processing file: {file_path}")
-                chunks += chunk_content(file_path)
+            for file_path in tqdm(files_to_process, desc="Chunking files"):
+                # logger.info(f"Processing file: {file_path}")
+                chunks.extend(chunk_content(file_path))
 
             # # 3. Create searchable index (using bm25s)
             create_bm25_index(chunks, "bm25s_indices/")
-
         except Exception as e:
             logger.error(f"Ingestion failed: {e}")
-            return
+        finally:
+            # this finally block always run..
+            end_time = time.time()
+            duration = end_time-start_time
+            print(f"Created index in {duration:.2f} seconds")
+            
 
     def search(self, search_string=None, k=None):
         """
@@ -224,7 +233,6 @@ class RagCLI:
 
         Question: {question}
         """
-
         messages = [Message(role="user", content=prompt)]
         try:
             data = OllamaRequest(
