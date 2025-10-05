@@ -28,7 +28,7 @@ evaluate:
 	data/datasets/AnsweredQuestions/Dataset_2025-09-21_valid_answered.json
 
 generate:
-	@uv run python -m src generate \
+	@uv run python -m src answer_dataset \
 	data/output/search_results/Dataset_2025-09-21_valid.json
 
 answer: 
