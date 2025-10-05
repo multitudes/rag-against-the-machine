@@ -1,3 +1,4 @@
 id	file_path
-1	assets/vllm-0.10.1/docs/serving/openai_compatible_server.md
-3	assets/vllm-0.10.1/docs/api/README.md
+1	assets/vllm-0.10.1/MANIFEST.in
+2	assets/vllm-0.10.1/mkdocs.yaml
+3	assets/vllm-0.10.1/setup.py

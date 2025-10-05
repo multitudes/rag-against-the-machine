@@ -1,0 +1,36 @@
+{
+    "search_results": [
+        {
+            "question_id": "q0",
+            "retrieved_sources": [
+                {
+                    "file_path": "assets/vllm-0.10.1/setup.py",
+                    "first_character_index": 2678,
+                    "last_character_index": 4541
+                },
+                {
+                    "file_path": "assets/vllm-0.10.1/mkdocs.yaml",
+                    "first_character_index": 3833,
+                    "last_character_index": 4226
+                },
+                {
+                    "file_path": "assets/vllm-0.10.1/setup.py",
+                    "first_character_index": 7450,
+                    "last_character_index": 9357
+                },
+                {
+                    "file_path": "assets/vllm-0.10.1/setup.py",
+                    "first_character_index": 4541,
+                    "last_character_index": 6824
+                },
+                {
+                    "file_path": "assets/vllm-0.10.1/setup.py",
+                    "first_character_index": 6824,
+                    "last_character_index": 7450
+                }
+            ],
+            "answer": "You can configure the OpenAI server by following these steps:\n\n1. **Set the environment variables**:\n   - Set `VLLM_TARGET_DEVICE` to `\"OpenAI\"` to specify the target device.\n   - Set `VLLM_PYTHON_EXECUTABLE` to `\"python\"` to specify the Python interpreter.\n   - Set `VLLM_PYTHON_PATH` to `\"python\"` to specify the Python path.\n\n2. **Configure the build type**:\n   - Use the environment variable `VLLM_BUILD_TYPE` to specify whether to build with debug information (`Debug`) or with full information (`RelWithDebInfo`).\n\n3. **Configure parallelism**:\n   - Use the environment variable `VLLM_NUM_JOBS` to specify the number of jobs to run.\n\n4. **Set the build tool**:\n   - If using Ninja, set `CMAKE_JOB_POOL_COMPILE:STRING=compile` and `CMAKE_JOB_POOLS:STRING=compile={num_jobs}` to specify the number of parallel jobs.\n\n5. **Install the libraries**:\n   - Install the extension into the proper location, ensuring that the installation directory is different from the build directory.\n\nThese steps allow you to configure the OpenAI server as needed."
+        }
+    ],
+    "k": 5
+}

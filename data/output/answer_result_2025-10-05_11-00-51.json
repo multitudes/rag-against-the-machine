@@ -1,0 +1,36 @@
+{
+    "search_results": [
+        {
+            "question_id": "q0",
+            "retrieved_sources": [
+                {
+                    "file_path": "assets/vllm-0.10.1/docs/serving/openai_compatible_server.md",
+                    "first_character_index": 3942,
+                    "last_character_index": 4400
+                },
+                {
+                    "file_path": "assets/vllm-0.10.1/docs/serving/openai_compatible_server.md",
+                    "first_character_index": 0,
+                    "last_character_index": 1953
+                },
+                {
+                    "file_path": "assets/vllm-0.10.1/docs/serving/openai_compatible_server.md",
+                    "first_character_index": 27171,
+                    "last_character_index": 27921
+                },
+                {
+                    "file_path": "assets/vllm-0.10.1/docs/serving/openai_compatible_server.md",
+                    "first_character_index": 9910,
+                    "last_character_index": 11858
+                },
+                {
+                    "file_path": "assets/vllm-0.10.1/docs/api/README.md",
+                    "first_character_index": 0,
+                    "last_character_index": 2012
+                }
+            ],
+            "answer": "You can configure the OpenAI-compatible server by setting the `--api-key` argument when running the vLLM server. This allows you to use OpenAI's API for model interaction."
+        }
+    ],
+    "k": 5
+}

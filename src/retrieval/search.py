@@ -52,9 +52,11 @@ class Searcher:
         retrieved_sources = []
         for i in range(results.shape[1]):
             logger.info(f"score {i+1}: {scores[0, i]}")
-            logger.info(f"Rank {i+1}: {results[0, i]}")
+            # logger.info(f"Rank {i+1}: {results[0, i]['text'][:20]}...")
             meta_idx = results[0, i]['id']
             meta = self.metadata[meta_idx]
+            meta_text = results[0, i]['text']
+            logger.info(f"Rank {i+1}: {meta_text[:40]}")
 
             min_src = MinimalSource(
                 file_path=meta['file_path'],
