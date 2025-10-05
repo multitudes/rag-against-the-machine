@@ -3,6 +3,7 @@ import json
 import bm25s
 import Stemmer
 import logging
+from typing import List
 from core.schemas import MinimalSource, MinimalSearchResults
 from core.schemas import StudentSearchResults, UnansweredQuestion
 
@@ -93,3 +94,23 @@ class Searcher:
             search_results=search_results,
             k=k
         )
+    
+    def retrieve_context(self, search_results: MinimalSearchResults) -> List[str]:
+        """
+        Reads the content of chunks from files based on search results.
+        Used to create the context for a prompt
+        """
+        context_chunks = []
+        for source in search_results.retrieved_sources:
+            try:
+                with open(source.file_path, 'r', encoding='utf-8') as f:
+                    f.seek(source.first_character_index)
+                    content = f.read(
+                        source.last_character_index
+                        - source.first_character_index)
+                    context_chunks.append(content)
+            except Exception as e:
+                logger.error(f"Error reading file {source.file_path}: {e}")
+        if not context_chunks:
+            logger.error("Could not retrieve any content. Abort")
+        return context_chunks

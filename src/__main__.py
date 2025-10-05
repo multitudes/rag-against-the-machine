@@ -8,16 +8,14 @@ import requests
 from tqdm import tqdm
 from datetime import datetime
 from retrieval.search import Searcher
-from src.utils import write_search_to_file
+from answering.answer import get_answer
+from src.utils import write_search_to_file, calculate_overlap_percentage
 from ingestion.chunking import chunk_content
 from ingestion.indexing import create_bm25_index
 from ingestion.file_processing import get_all_files
-from core.ollama_request import OllamaRequest, Message
 from ingestion.file_processing import extract_files_from_questions
 from core.schemas import UnansweredQuestion, StudentSearchResults
-from core.schemas import StudentSearchResultsAndAnswer, MinimalAnswer
-
-API_URL = "http://localhost:11434/api/chat"
+from core.schemas import StudentSearchResultsAndAnswer
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -153,98 +151,84 @@ class RagCLI:
             ground_truth_path: Path to the ground
             truth/answered questions JSON file
         """
-        print("📊 Measuring recall@k on dataset...")
         original_level = logger.level
         logger.setLevel(logging.INFO)
-        logger.info(f"Search results: {search_results_path}")
-        logger.info(f"Ground truth: {ground_truth_path}")
+        
         try:
-            # open my search results with the sources I found
+            logger.info("📊 Measuring recall@k on dataset (with overlap)...")
+            logger.info(f"Search results: {search_results_path}")
+            logger.info(f"Ground truth: {ground_truth_path}")
+            
             with open(search_results_path, 'r', encoding='utf-8') as f:
                 search_data = json.load(f)
-            # these are the ground truths
             with open(ground_truth_path, 'r', encoding='utf-8') as f:
                 ground_truth_data = json.load(f)
 
-            # dictionary comprehension
-            # It creates a dictionary where each key is a question_id.
-            # The value for each key is a list of the correct
-            # file_paths for that question.
             ground_truth_map = {
-                item['question_id']: [source['file_path']
-                                      for source in item.get('sources', [])]
+                item['question_id']: item.get('sources', [])
                 for item in ground_truth_data.get('rag_questions', [])
             }
-            # total_questions will count how many questions from the
-            # ground truth were also found in the search results.
-            total_questions = 0
-            total_hits = 0
-            missed = 0
-
+            
+            # for each question I need to get the recall, append and at 
+            # the end do the average
+            quest_recall_scores = []
+            # go through my results and get the question_id to match it to 
+            # the ground_truth ones
             for result in search_data.get('search_results', []):
                 question_id = result.get('question_id')
-
                 if question_id not in ground_truth_map:
-                    missed += 1
-                    logger.warning(
-                        f"Question ID {question_id} from search results not found in ground truth. Skipping.")
+                    logger.warning(f"Question ID {question_id} from \
+                                   earch results not found in ground\
+                                   truth. Skipping.")
+                    continue
+                # these are the sources in the reference ground truth but 
+                # in this example it is actually mostly an array of one
+                ground_truth_sources = ground_truth_map[question_id]
+                # my sources are depending of the k variable when searching
+                retrieved_sources = result.get('retrieved_sources', [])
+                
+                # cannot continue without my ref
+                if not ground_truth_sources:
                     continue
 
-                total_questions += 1
+                number_found = 0
+                for gt_source in ground_truth_sources:
+                    is_found = False
+                    for ret_source in retrieved_sources:
+                        if gt_source['file_path'] == ret_source['file_path']:
+                            overlap = calculate_overlap_percentage(
+                                gt_source['first_character_index'],
+                                gt_source['last_character_index'],
+                                ret_source['first_character_index'],
+                                ret_source['last_character_index']
+                            )
+                            if overlap >= 5.0:
+                                is_found = True
+                                # because I dont need to find two same sources
+                                break
+                    # catching the break above
+                    if is_found:
+                        number_found += 1
+                
+                recall_for_question = number_found / len(ground_truth_sources)
+                quest_recall_scores.append(recall_for_question)
 
-                ground_truth_paths = ground_truth_map[question_id]
-
-                # This is a set comprehension because I dont care if a 
-                # file path appears twice
-                retrieved_paths = {source['file_path']
-                                   for source in
-                                   result.get('retrieved_sources', [])}
-                # the ground_truth_paths in my exaples is usually just an array
-                # of one path but i still check for more than one
-                is_hit = any(gt_path in retrieved_paths for gt_path
-                             in ground_truth_paths)
-                if is_hit:
-                    total_hits += 1
-                else:
-                    missed += 1
-                    logger.info(f"missing: == {ground_truth_paths[0]}")
-                    logger.info(f"in retrieve3d: {retrieved_paths}")
-            if total_questions == 0:
-                logger.error(
-                    "No matching questions found between search results and ground truth.")
+            if not quest_recall_scores:
+                logger.error("No matching questions found to evaluate.")
                 return 0.0
-            logger.info(f"recall = total_hits / total_questions {total_hits} / {total_questions}")
-            logger.info(f"missed {missed} / {total_questions}")
-            recall = total_hits / total_questions
 
-            print(f"recall is {recall}")
+            # The final recall is the average of the recall over all questions
+            final_recall = sum(quest_recall_scores) / len(quest_recall_scores)
+            
+            logger.info(f"Final Recall Score (with >=5% overlap): {final_recall:.2%}")
             logger.info("Recall@k measurement completed!")
+            return final_recall
+            
         except Exception as e:
-            logger.error(f"Error evaluating recall: {e}")
+            logger.error(f"Error evaluating recall: {e}", exc_info=True)
+            return 0.0
         finally:
-            # Always restore the original logging level
             logger.setLevel(original_level)
-
-    def generate(self, output_path=None):
-        """
-        Generate answers using the RAG system.
-        """
-        logger.info("Generating answers using RAG...")
-        if output_path:
-            logger.info(f"Output will be saved to: {output_path}")
-        else:
-            # Build the filename based on current date
-            date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            filename = f"Dataset_{date_str}_valid.json"
-            # Create the full path
-            output_dir = "data/datasets/AnsweredQuestions"
-            output_path = os.path.join(output_dir, filename)
-            # Create directory if it doesn't exist
-            os.makedirs(output_dir, exist_ok=True)
-            logger.info("No output path provided, results will be ")
-            logger.info(f"saved to: {output_path}")
-        # Implement generation logic here
-        logger.info("Answer generation completed!")
 
     def answer(self, question, k=5):
         """
@@ -254,79 +238,13 @@ class RagCLI:
             question: The question to answer
             k: The number of top results to return
         """
-        logger.info("Answering a question using RAG...")
-        logger.info(f"Question: {question}")
-        # get context
-        searcher = Searcher(index_dir="bm25s_indices/")
-        search_results = searcher.search_one(query=question, k=k)
-        logger.info(
-            f"{search_results.question_id} \n"
-            f"{search_results.retrieved_sources}"
+        minimal_answer = get_answer(question, k)
+
+        final_result = StudentSearchResultsAndAnswer(
+            search_results=[minimal_answer],
+            k=k
         )
-
-        # extract chunks
-        context_chunks = []
-
-        for source in search_results.retrieved_sources:
-            try:
-                with open(source.file_path, 'r', encoding='utf-8') as f:
-                    f.seek(source.first_character_index)
-                    content = f.read(
-                        source.last_character_index
-                        - source.first_character_index)
-                    context_chunks.append(content)
-            except Exception as e:
-                logger.error(f"Error reading file {source.file_path}: {e}")
-        if not context_chunks:
-            logger.error("Could not retrieve any content. Abort")
-            return
-
-        logger.info(f"Retrieved {len(context_chunks)} chunks")
-
-        logger.info("Generating answer...")
-        context_str = "\n\n---\n\n".join(context_chunks)
-
-        prompt = f"""
-        Use the following context to answer the question.
-        If the answer is not in the context, say you don't know.
-
-        Context:
-        {context_str}
-
-        Question: {question}
-        """
-        messages = [Message(role="user", content=prompt)]
         try:
-            data = OllamaRequest(
-                model="qwen3:0.6b",
-                messages=messages,
-                tools=[],
-                stream=False,
-            )
-            response = requests.post(
-                API_URL,
-                data=data.model_dump_json(),
-                headers={"Content-Type": "application/json"}
-            )
-            response.raise_for_status()
-            response_data = response.json()
-            answer_content = response_data['message']['content']
-
-            logger.info("\nAnswer:\n")
-            logger.info(answer_content)
-
-            # Create MinimalAnswer by combining search results
-            # and the new answer
-            minimal_answer = MinimalAnswer(
-                question_id=search_results.question_id,
-                retrieved_sources=search_results.retrieved_sources,
-                answer=answer_content
-            )
-
-            final_result = StudentSearchResultsAndAnswer(
-                search_results=[minimal_answer],
-                k=k
-            )
             output_dir = "data/output"
             os.makedirs(output_dir, exist_ok=True)
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -342,6 +260,23 @@ class RagCLI:
         question = UnansweredQuestion(question=question)
 
         logger.info("Question answered!")
+
+    def answer_dataset(self, output_path=None):
+        """
+        Generate answers using the RAG system.
+        """
+        logger.info("Generating answers using RAG...")
+        # Build the filename based on current date
+        date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"Dataset_{date_str}_valid.json"
+        # Create the full path
+        output_dir = "data/output/search_results/"
+        output_path = os.path.join(output_dir, filename)
+        # Create directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+        logger.info(f"results will be saved to: {output_path}")
+        
+        logger.info("Answer generation completed!")
 
 
 def main():
