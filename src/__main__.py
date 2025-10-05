@@ -21,7 +21,6 @@ API_URL = "http://localhost:11434/api/chat"
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.ERROR)
-# logger.setLevel(logging.ERROR)
 
 
 class RagCLI:
@@ -154,6 +153,8 @@ class RagCLI:
             truth/answered questions JSON file
         """
         print("📊 Measuring recall@k on dataset...")
+        original_level = logger.level
+        logger.setLevel(logging.INFO)
         logger.info(f"Search results: {search_results_path}")
         logger.info(f"Ground truth: {ground_truth_path}")
         try:
@@ -161,11 +162,48 @@ class RagCLI:
                 search_data = json.load(f)
             with open(ground_truth_path, 'r', encoding='utf-8') as f:
                 ground_truth_data = json.load(f)
+
+            ground_truth_map = {
+                item['question_id']: [source['file_path']
+                                      for source in item.get('sources', [])]
+                for item in ground_truth_data.get('rag_questions', [])
+            }
+            total_questions = 0
+            total_hits = 0
+
+            for result in search_data.get('search_results', []):
+                question_id = result.get('question_id')
+                print(f"{question_id}")
+                if question_id not in ground_truth_map:
+                    logger.warning(
+                        f"Question ID {question_id} from search results not found in ground truth. Skipping.")
+                    continue
+
+                total_questions += 1
+
+                ground_truth_paths = ground_truth_map[question_id]
+                print(f"{ground_truth_paths}")
+                retrieved_paths = {source['file_path']
+                                   for source in
+                                   result.get('retrieved_sources', [])}
+                print(f"{retrieved_paths}")
+                is_hit = any(gt_path in retrieved_paths for gt_path
+                             in ground_truth_paths)
+                if is_hit:
+                    total_hits += 1
+            if total_questions == 0:
+                logger.error(
+                    "No matching questions found between search results and ground truth.")
+                return 0.0
+            recall = total_hits / total_questions
+
+            print(f"recall is {recall}")
+            logger.info("Recall@k measurement completed!")
         except Exception as e:
-            logger.error(f"Error loading files: {e}")
-
-
-        logger.info("Recall@k measurement completed!")
+            logger.error(f"Error evaluating recall: {e}")
+        finally:
+            # Always restore the original logging level
+            logger.setLevel(original_level)
 
     def generate(self, output_path=None):
         """
