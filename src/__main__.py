@@ -114,7 +114,7 @@ class RagCLI:
             # and logger.info it
             if result:
                 logger.info(result.model_dump_json(indent=4))
-                write_search_to_file(result, "data/results")
+                write_search_to_file(result, "data/output/search_results")
             else:
                 logger.info("No results found.")
         except Exception as e:
@@ -136,7 +136,7 @@ class RagCLI:
                           for item in questions_data]
             result = searcher.search_dataset(unanswered)
             if result:
-                write_search_to_file(result, "data/results")
+                write_search_to_file(result, "data/output/search_results")
                 logger.info(result.model_dump_json(indent=4))
             else:
                 logger.info("No results found.")
@@ -156,6 +156,8 @@ class RagCLI:
         logger.info(f"Search results: {search_results_path}")
         logger.info(f"Ground truth: {ground_truth_path}")
         
+        
+
         logger.info("Recall@k measurement completed!")
 
     def generate(self, output_path=None):

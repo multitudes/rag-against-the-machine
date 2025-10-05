@@ -24,7 +24,7 @@ search_dataset:
 
 evaluate:
 	@uv run python -m src evaluate \
-	data/output/search_results/Dataset_2025-09-21.json \
+	data/output/search_results/search_results_2025-10-05_14-10-46.json \
 	data/datasets/Dataset_2025-09-21_valid_answered.json
 
 generate:
