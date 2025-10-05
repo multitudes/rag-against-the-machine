@@ -276,6 +276,19 @@ class RagCLI:
             logger.error(f"Failed to parse dataset file: {e}")
             return
 
+        minimal_answers = []
+        for question in dataset.rag_questions:
+            try:
+                minimal_answer = get_answer(question.question, k=self.k)
+                minimal_answers.append(minimal_answer)
+            except Exception as e:
+                logger.error(f"Failed to generate answer for question '{question.question}': {e}")
+        
+                # Structure the final results using the appropriate Pydantic model
+        final_result = StudentSearchResultsAndAnswer(
+            search_results=minimal_answers,
+            k=self.k
+        )
         # Build the filename based on current date
         date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         filename = f"Dataset_{date_str}_valid.json"
@@ -284,6 +297,10 @@ class RagCLI:
         output_path = os.path.join(output_dir, filename)
         # Create directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
+                # Save the results to the specified output path
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(final_result.model_dump_json(indent=4))
+
         logger.info(f"results will be saved to: {output_path}")
         
         logger.info("Answer generation completed!")
