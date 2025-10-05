@@ -15,7 +15,7 @@ from ingestion.indexing import create_bm25_index
 from ingestion.file_processing import get_all_files
 from ingestion.file_processing import extract_files_from_questions
 from core.schemas import UnansweredQuestion, StudentSearchResults
-from core.schemas import StudentSearchResultsAndAnswer
+from core.schemas import StudentSearchResultsAndAnswer, RagDataset
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -128,10 +128,7 @@ class RagCLI:
         logger.info(f"Searching using dataset: {dataset_path}")
         try:
             with open(dataset_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            questions_data = data.get("rag_questions", [])
-            unanswered = [UnansweredQuestion(**item)
-                          for item in questions_data]
+                unanswered = RagDataset.model_validate_json(f.read())
             result = searcher.search_dataset(unanswered)
             if result:
                 write_search_to_file(result, "data/output/search_results")
@@ -160,9 +157,10 @@ class RagCLI:
             logger.info(f"Ground truth: {ground_truth_path}")
             
             with open(search_results_path, 'r', encoding='utf-8') as f:
-                search_data = json.load(f)
+                search_data = StudentSearchResults.model_validate_json(f.read())
             with open(ground_truth_path, 'r', encoding='utf-8') as f:
-                ground_truth_data = json.load(f)
+                ground_truth_data = RagDataset.model_validate_json(f.read())
+
 
             ground_truth_map = {
                 item['question_id']: item.get('sources', [])
@@ -266,6 +264,18 @@ class RagCLI:
         Generate answers using the RAG system.
         """
         logger.info("Generating answers using RAG...")
+        dataset_path = "data/datasets/UnansweredQuestions/Dataset_2025-09-21_valid_unanswered.json"
+        
+        try:
+            with open(dataset_path, 'r', encoding='utf-8') as f:
+                dataset = RagDataset.model_validate_json(f.read())
+        except FileNotFoundError:
+            logger.error(f"Dataset file not found at: {dataset_path}")
+            return
+        except Exception as e:
+            logger.error(f"Failed to parse dataset file: {e}")
+            return
+
         # Build the filename based on current date
         date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         filename = f"Dataset_{date_str}_valid.json"
