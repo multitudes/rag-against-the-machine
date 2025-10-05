@@ -144,7 +144,8 @@ class RagCLI:
         except Exception as e:
             logger.error(f"Failed collecting questions from dataset: {e}")
 
-    def evaluate(self, search_results_path, ground_truth_path):
+    def measure_recall_at_k_on_dataset(self, search_results_path,
+                                       ground_truth_path):
         """
         Evaluate search results by measuring recall@k on a dataset.
         Args:
@@ -152,11 +153,17 @@ class RagCLI:
             ground_truth_path: Path to the ground
             truth/answered questions JSON file
         """
-        logger.info("📊 Measuring recall@k on dataset...")
+        print("📊 Measuring recall@k on dataset...")
         logger.info(f"Search results: {search_results_path}")
         logger.info(f"Ground truth: {ground_truth_path}")
-        
-        
+        try:
+            with open(search_results_path, 'r', encoding='utf-8') as f:
+                search_data = json.load(f)
+            with open(ground_truth_path, 'r', encoding='utf-8') as f:
+                ground_truth_data = json.load(f)
+        except Exception as e:
+            logger.error(f"Error loading files: {e}")
+
 
         logger.info("Recall@k measurement completed!")
 

@@ -23,9 +23,9 @@ search_dataset:
 	data/datasets/UnansweredQuestions/Dataset_2025-09-21_valid_unanswered.json
 
 evaluate:
-	@uv run python -m src evaluate \
+	@uv run python -m src measure_recall_at_k_on_dataset \
 	data/output/search_results/search_results_2025-10-05_14-10-46.json \
-	data/datasets/Dataset_2025-09-21_valid_answered.json
+	data/datasets/AnsweredQuestions/Dataset_2025-09-21_valid_answered.json
 
 generate:
 	@uv run python -m src generate \
