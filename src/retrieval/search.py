@@ -36,7 +36,10 @@ class Searcher:
             self.metadata = json.load(f)
         logger.info(f"Loaded metadata for {len(self.metadata)} chunks.")
 
-    def search_one(self, query: str, k: int = 5) -> MinimalSearchResults:
+    def search_one(self,
+                   query: str,
+                   k: int = 5
+                   ) -> MinimalSearchResults:
         """
         Performs a search and returns a structured StudentSearchResults object.
         """

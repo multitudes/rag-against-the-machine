@@ -16,4 +16,3 @@ def write_search_to_file(result: StudentSearchResults, output_dir: str):
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(result.model_dump_json(indent=4))
     logger.info(f"Search results saved to {output_path}")
-    logger.info(result.model_dump_json(indent=4))

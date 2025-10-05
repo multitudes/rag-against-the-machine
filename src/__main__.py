@@ -20,7 +20,7 @@ from core.schemas import StudentSearchResultsAndAnswer, MinimalAnswer
 API_URL = "http://localhost:11434/api/chat"
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.INFO)
 
 
 class RagCLI:
@@ -54,7 +54,7 @@ class RagCLI:
 
     def index(self):
         """
-        Ingest documents from a repository for indexing.
+        Fire CLI - Ingest documents from a repository for indexing.
         Uses the instance variables set during initialization.
         """
         logger.info("Ingesting documents...")
@@ -78,10 +78,11 @@ class RagCLI:
                 # logger.info(f"Processing file: {file_path}")
                 chunks.extend(chunk_content(file_path, self.chunk_size))
 
-            # # 3. Create searchable index (using bm25s)
             create_bm25_index(chunks, "bm25s_indices/")
+
         except Exception as e:
             logger.error(f"Ingestion failed: {e}")
+
         finally:
             # this finally block always run..
             end_time = time.time()
@@ -99,8 +100,8 @@ class RagCLI:
             k = self.k
         logger.info(f"Search query: {search_string}")
         logger.info(f"Number of top results to return: {k}")
-        search_string = "What command is used to start the\
-            vLLM OpenAI-compatible server?"
+        # search_string = "What command is used to start the\
+        #     vLLM OpenAI-compatible server?"
 
         try:
             searcher = Searcher(index_dir="bm25s_indices/")
@@ -158,23 +159,33 @@ class RagCLI:
         logger.info(f"Search results: {search_results_path}")
         logger.info(f"Ground truth: {ground_truth_path}")
         try:
+            # open my search results with the sources I found
             with open(search_results_path, 'r', encoding='utf-8') as f:
                 search_data = json.load(f)
+            # these are the ground truths
             with open(ground_truth_path, 'r', encoding='utf-8') as f:
                 ground_truth_data = json.load(f)
 
+            # dictionary comprehension
+            # It creates a dictionary where each key is a question_id.
+            # The value for each key is a list of the correct
+            # file_paths for that question.
             ground_truth_map = {
                 item['question_id']: [source['file_path']
                                       for source in item.get('sources', [])]
                 for item in ground_truth_data.get('rag_questions', [])
             }
+            # total_questions will count how many questions from the
+            # ground truth were also found in the search results.
             total_questions = 0
             total_hits = 0
+            missed = 0
 
             for result in search_data.get('search_results', []):
                 question_id = result.get('question_id')
-                print(f"{question_id}")
+
                 if question_id not in ground_truth_map:
+                    missed += 1
                     logger.warning(
                         f"Question ID {question_id} from search results not found in ground truth. Skipping.")
                     continue
@@ -182,19 +193,28 @@ class RagCLI:
                 total_questions += 1
 
                 ground_truth_paths = ground_truth_map[question_id]
-                print(f"{ground_truth_paths}")
+
+                # This is a set comprehension because I dont care if a 
+                # file path appears twice
                 retrieved_paths = {source['file_path']
                                    for source in
                                    result.get('retrieved_sources', [])}
-                print(f"{retrieved_paths}")
+                # the ground_truth_paths in my exaples is usually just an array
+                # of one path but i still check for more than one
                 is_hit = any(gt_path in retrieved_paths for gt_path
                              in ground_truth_paths)
                 if is_hit:
                     total_hits += 1
+                else:
+                    missed += 1
+                    logger.info(f"missing: == {ground_truth_paths[0]}")
+                    logger.info(f"in retrieve3d: {retrieved_paths}")
             if total_questions == 0:
                 logger.error(
                     "No matching questions found between search results and ground truth.")
                 return 0.0
+            logger.info(f"recall = total_hits / total_questions {total_hits} / {total_questions}")
+            logger.info(f"missed {missed} / {total_questions}")
             recall = total_hits / total_questions
 
             print(f"recall is {recall}")
