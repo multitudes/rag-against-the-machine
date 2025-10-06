@@ -15,8 +15,11 @@
 ```
 
 ## resources
+https://google.github.io/python-fire/using-cli/#calling-a-function  
+https://www.anthropic.com/engineering/contextual-retrieval  
 https://bm25s.github.io  
 https://github.com/xhluca/bm25s  
 https://github.com/xhluca/bm25s?tab=readme-ov-file  
-
 https://github.com/xhluca/bm25s/blob/main/examples/index_nq.py  
+https://docs.chonkie.ai/python-sdk/chunkers/code-chunker  
+https://github.com/chonkie-inc/chonkie?tab=readme-ov-file  
