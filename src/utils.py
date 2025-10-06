@@ -1,7 +1,7 @@
 import os
 import logging
 from datetime import datetime
-from core.schemas import StudentSearchResults
+from core.schemas import StudentSearchResults, StudentSearchResultsAndAnswer
 
 logger = logging.getLogger(__name__)
 
@@ -33,3 +33,18 @@ def calculate_overlap_percentage(start1, end1, start2, end2):
         return 0.0
         
     return (overlap_length / ground_truth_length) * 100
+
+def save_search_results_and_answer_to_json(final_result: StudentSearchResultsAndAnswer):
+    """
+    """
+    # Build the filename based on current date
+    date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"Dataset_{date_str}_valid.json"
+    output_dir = "data/output/search_results/"
+    output_path = os.path.join(output_dir, filename)
+    os.makedirs(output_dir, exist_ok=True)
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write(final_result.model_dump_json(indent=4))
+
+    logger.info(f"results will be saved to: {output_path}")
+    logger.info("Answer generation completed!")

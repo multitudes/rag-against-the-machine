@@ -32,7 +32,7 @@ generate:
 	data/output/search_results/Dataset_2025-09-21_valid.json
 
 answer: 
-	@uv run python -m src answer "How to configure OpenAI server?" --k 10
+	@uv run python -m src answer_one "How to configure OpenAI server?" --k 10
 
 debug:
 	@uv run python -m pdb -m src

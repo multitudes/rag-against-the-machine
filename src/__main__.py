@@ -9,7 +9,7 @@ from tqdm import tqdm
 from datetime import datetime
 from retrieval.search import Searcher
 from answering.answer import get_answer
-from src.utils import write_search_to_file, calculate_overlap_percentage
+from src.utils import write_search_to_file, calculate_overlap_percentage, save_search_results_and_answer_to_json
 from ingestion.chunking import chunk_content
 from ingestion.indexing import create_bm25_index
 from ingestion.file_processing import get_all_files
@@ -61,6 +61,7 @@ class RagCLI:
         logger.info(f"Questions file: {self.questions_file}")
 
         start_time = time.time()
+        logger.setLevel(ERROR)
         try:
             if self.mode == "selective":
                 # Load questions to find which files to process
@@ -68,7 +69,6 @@ class RagCLI:
                     self.questions_file)
             else:
                 # Get all files in repository
-
                 files_to_process = get_all_files(self.repo_path)
 
             chunks = []
@@ -161,7 +161,6 @@ class RagCLI:
             with open(ground_truth_path, 'r', encoding='utf-8') as f:
                 ground_truth_data = RagDataset.model_validate_json(f.read())
 
-
             ground_truth_map = {
                 item['question_id']: item.get('sources', [])
                 for item in ground_truth_data.get('rag_questions', [])
@@ -228,7 +227,7 @@ class RagCLI:
         finally:
             logger.setLevel(original_level)
 
-    def answer(self, question, k=5):
+    def answer_one(self, question, k=5):
         """
         Answer a single question using the RAG system.
 
@@ -249,15 +248,11 @@ class RagCLI:
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             outputfilename = f"answer_result_{current_date}.json"
             output_path = os.path.join(output_dir, outputfilename)
-
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(final_result.model_dump_json(indent=4))
             logger.info(f"Answer and sources saved to {output_path}")
-
         except Exception as e:
             logger.error(f"Failed to get answer from LLM: {e}")
-        question = UnansweredQuestion(question=question)
-
         logger.info("Question answered!")
 
     def answer_dataset(self, output_path=None):
@@ -276,36 +271,30 @@ class RagCLI:
         except Exception as e:
             logger.error(f"Failed to parse dataset file: {e}")
             return
-
-        minimal_answers = []
-        for question in dataset.rag_questions:
-            try:
-                minimal_answer = get_answer(question.question, k=self.k)
-                minimal_answers.append(minimal_answer)
-            except Exception as e:
-                logger.error(f"Failed to generate answer for question '{question.question}': {e}")
         
-                # Structure the final results using the appropriate Pydantic model
-        final_result = StudentSearchResultsAndAnswer(
-            search_results=minimal_answers,
-            k=self.k
-        )
-        # Build the filename based on current date
-        date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        filename = f"Dataset_{date_str}_valid.json"
-        # Create the full path
-        output_dir = "data/output/search_results/"
-        output_path = os.path.join(output_dir, filename)
-        # Create directory if it doesn't exist
-        os.makedirs(output_dir, exist_ok=True)
-                # Save the results to the specified output path
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(final_result.model_dump_json(indent=4))
-
-        logger.info(f"results will be saved to: {output_path}")
-        logger.info("Answer generation completed!")
-
-
+        start_time = time.time()
+        minimal_answers = []
+        original_level = logger.level
+        logger.setLevel(logging.ERROR)
+        try:
+            for question in tqdm(dataset.rag_questions):
+                minimal_answer = get_answer(question, k=self.k)
+                minimal_answers.append(minimal_answer)
+            # Structure the final results using the appropriate Pydantic model
+            final_result = StudentSearchResultsAndAnswer(
+                search_results=minimal_answers,
+                k=self.k
+            )
+            save_search_results_and_answer_to_json(final_result)
+        except Exception as e:
+            logger.error("Failed to generate answer for questions")
+            logger.error(f"'{question.question}': {e}")
+        finally:
+            logger.setLevel(original_level)
+            duration = time.time() - start_time
+            logger.info(f"Answered {len(minimal_answers)} questions ")
+            logger.info(f"in {duration:.2f}s")
+                        
 def main():
     """Main entry point for the CLI."""
     logger.info("🤘 Rage Against the Machine - RAG System")

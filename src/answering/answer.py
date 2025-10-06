@@ -15,7 +15,8 @@ def get_answer(unansweredQuestion: UnansweredQuestion, k: int, ):
     logger.info(f"Question: {unansweredQuestion.question}")
     # get context
     searcher = Searcher(index_dir="bm25s_indices/")
-    search_results = searcher.search_one(unansweredQuestion=unansweredQuestion, k=k)
+    search_results = searcher.search_one(unansweredQuestion=unansweredQuestion,
+                                         k=k)
     logger.info(
         f"{search_results.question_id} \n"
         f"{search_results.retrieved_sources}"
@@ -25,7 +26,7 @@ def get_answer(unansweredQuestion: UnansweredQuestion, k: int, ):
     logger.info(f"Retrieved {len(context_chunks)} chunks")
     logger.info("Generating answer...")
     context_str = "\n\n---\n\n".join(context_chunks)
-    
+
     prompt = f"""
     Use the following context to answer the question.
     If the answer is not in the context, say you don't know.
@@ -58,7 +59,7 @@ def get_answer(unansweredQuestion: UnansweredQuestion, k: int, ):
         # Create MinimalAnswer by combining search results
         # and the new answer
         minimal_answer = MinimalAnswer(
-            question_id=search_results.question_id,
+            question_id=unansweredQuestion.question_id,
             retrieved_sources=search_results.retrieved_sources,
             answer=answer_content
         )
