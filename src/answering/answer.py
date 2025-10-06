@@ -3,19 +3,19 @@ import logging
 import requests
 from retrieval.search import Searcher
 from core.ollama_request import OllamaRequest, Message
-from core.schemas import MinimalAnswer
+from core.schemas import MinimalAnswer, UnansweredQuestion
 
 API_URL = "http://localhost:11434/api/chat"
 
 logger = logging.getLogger(__name__)
 
 
-def get_answer(question: str, k: int, ):
+def get_answer(unansweredQuestion: UnansweredQuestion, k: int, ):
     logger.info("Answering a question using RAG...")
-    logger.info(f"Question: {question}")
+    logger.info(f"Question: {unansweredQuestion.question}")
     # get context
     searcher = Searcher(index_dir="bm25s_indices/")
-    search_results = searcher.search_one(query=question, k=k)
+    search_results = searcher.search_one(unansweredQuestion=unansweredQuestion, k=k)
     logger.info(
         f"{search_results.question_id} \n"
         f"{search_results.retrieved_sources}"
@@ -33,7 +33,7 @@ def get_answer(question: str, k: int, ):
     Context:
     {context_str}
 
-    Question: {question}
+    Question: {unansweredQuestion.question}
     """
     messages = [Message(role="user", content=prompt)]
     try:

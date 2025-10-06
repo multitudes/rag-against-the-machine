@@ -236,7 +236,8 @@ class RagCLI:
             question: The question to answer
             k: The number of top results to return
         """
-        minimal_answer = get_answer(question, k)
+        unansweredQuestion = UnansweredQuestion(question=question)
+        minimal_answer = get_answer(unansweredQuestion, k)
 
         final_result = StudentSearchResultsAndAnswer(
             search_results=[minimal_answer],
@@ -302,7 +303,6 @@ class RagCLI:
             f.write(final_result.model_dump_json(indent=4))
 
         logger.info(f"results will be saved to: {output_path}")
-        
         logger.info("Answer generation completed!")
 
 

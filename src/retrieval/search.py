@@ -38,14 +38,16 @@ class Searcher:
         logger.info(f"Loaded metadata for {len(self.metadata)} chunks.")
 
     def search_one(self,
-                   query: str,
+                   unansweredQuestion: UnansweredQuestion,
                    k: int = 5
                    ) -> MinimalSearchResults:
         """
         Performs a search and returns a structured StudentSearchResults object.
         """
-        logger.info(f"Retrieving top-{k} results for query: '{query}'")
-        query_tokens = bm25s.tokenize(query, stemmer=self.stemmer)
+        logger.info(f"Retrieving top-{k} results for query: ")
+        logger.info(f"'{unansweredQuestion.question}'")
+        query_tokens = bm25s.tokenize(unansweredQuestion.question, 
+                                      stemmer=self.stemmer)
 
         # Get top-k results as a tuple of (doc ids, scores).
         results, scores = self.retriever.retrieve(query_tokens, k=k)
@@ -68,7 +70,7 @@ class Searcher:
             retrieved_sources.append(min_src)
         logger.info(f"min srcs are {len(retrieved_sources)}")
         return MinimalSearchResults(
-            question_id="q0",
+            question_id=unansweredQuestion.question_id,
             retrieved_sources=retrieved_sources
         )
 
