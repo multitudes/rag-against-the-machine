@@ -3,6 +3,7 @@ import json
 import bm25s
 import Stemmer
 import logging
+from typing import List
 from core.schemas import MinimalSource, MinimalSearchResults
 from core.schemas import StudentSearchResults, UnansweredQuestion
 
@@ -36,12 +37,17 @@ class Searcher:
             self.metadata = json.load(f)
         logger.info(f"Loaded metadata for {len(self.metadata)} chunks.")
 
-    def search_one(self, query: str, k: int = 5) -> MinimalSearchResults:
+    def search_one(self,
+                   unansweredQuestion: UnansweredQuestion,
+                   k: int = 5
+                   ) -> MinimalSearchResults:
         """
         Performs a search and returns a structured StudentSearchResults object.
         """
-        logger.info(f"Retrieving top-{k} results for query: '{query}'")
-        query_tokens = bm25s.tokenize(query, stemmer=self.stemmer)
+        logger.info(f"Retrieving top-{k} results for query: ")
+        logger.info(f"'{unansweredQuestion.question}'")
+        query_tokens = bm25s.tokenize(unansweredQuestion.question, 
+                                      stemmer=self.stemmer)
 
         # Get top-k results as a tuple of (doc ids, scores).
         results, scores = self.retriever.retrieve(query_tokens, k=k)
@@ -64,7 +70,7 @@ class Searcher:
             retrieved_sources.append(min_src)
         logger.info(f"min srcs are {len(retrieved_sources)}")
         return MinimalSearchResults(
-            question_id="q0",
+            question_id=unansweredQuestion.question_id,
             retrieved_sources=retrieved_sources
         )
 
@@ -90,3 +96,23 @@ class Searcher:
             search_results=search_results,
             k=k
         )
+    
+    def retrieve_context(self, search_results: MinimalSearchResults) -> List[str]:
+        """
+        Reads the content of chunks from files based on search results.
+        Used to create the context for a prompt
+        """
+        context_chunks = []
+        for source in search_results.retrieved_sources:
+            try:
+                with open(source.file_path, 'r', encoding='utf-8') as f:
+                    f.seek(source.first_character_index)
+                    content = f.read(
+                        source.last_character_index
+                        - source.first_character_index)
+                    context_chunks.append(content)
+            except Exception as e:
+                logger.error(f"Error reading file {source.file_path}: {e}")
+        if not context_chunks:
+            logger.error("Could not retrieve any content. Abort")
+        return context_chunks

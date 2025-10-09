@@ -32,10 +32,9 @@ def chunk_content(
     Returns:
         List of chunk dictionaries.
     """
-    # logger.info(f"Processing file with Chonkie: {file_path}")
+    logger.info(f"Processing file with Chonkie: {file_path}")
     chunks = []
     try:
-        # Improved extension handling
         parts = file_path.lower().rsplit('.', 1)
         if len(parts) == 2:
             ext = parts[1]
@@ -46,26 +45,25 @@ def chunk_content(
             # Handle files with no extension like 'Dockerfile'
             ext = file_path.split('/')[-1].lower()
 
-        # Define language mapping for CodeChunker
-        code_languages = {
-            "py": "python", "pyi": "python",
-            "sh": "bash",
-            "cu": "cpp", "cuh": "cpp", "cpp": "cpp", "h": "cpp", "hpp": "cpp", "inl": "cpp",
-            "css": "css",
-            "cmake": "cmake", "cmakelists.txt": "cmake",
-            "js": "javascript"
-        }
-
-        # Define extensions to ignore
         ignore_extensions = [
             "pdf", "zip", "so", "svg", "png", "eot", "ttf", "woff", "woff2",
             "pylintrc", "ico", "jpg", "neuron", "nightly_torch", "ppc64le",
             "rocm", "rocm_base", "s390x", "tpu", "xpu", "typed"
         ]
         if ext in ignore_extensions:
+            logger.info(f"Ignoring binary/config file: {file_path}")
             return []
         
-        # Define text/markdown extensions
+        # Define language mapping for CodeChunker
+        code_languages = {
+            "py": "python", "pyi": "python",
+            "sh": "bash",
+            "cu": "cpp", "cuh": "cpp", "cpp": "cpp", "h": "cpp",
+            "hpp": "cpp", "inl": "cpp",
+            "css": "css",
+            "cmake": "cmake", "cmakelists.txt": "cmake",
+            "js": "javascript"
+        }
         text_extensions = [
             "txt", "toml", "yaml", "yml", "json", "license", "dco",
             "manifest.in", "in", "j2", "jinja", "tpl", "jsonl", "patch", "env"
@@ -82,7 +80,8 @@ def chunk_content(
         # Select the appropriate chunker based on file type
         if ext in code_languages:
             language = code_languages[ext]
-            # logger.info(f"Using CodeChunker for {language} in {file_path}")
+            logger.info(f"Using CodeChunker for\
+                        {language} in {file_path}")
             chunker = CodeChunker(
                 language=language,
                 tokenizer_or_token_counter="character",
@@ -90,24 +89,22 @@ def chunk_content(
                 include_nodes=False
             )
         elif ext in markdown_extensions:
-            # logger.info(f"Using RecursiveChunker for markdown in {file_path}")
+            logger.info(f"Using RecursiveChunker\
+                        for markdown in {file_path}")
             chunker = RecursiveChunker.from_recipe("markdown", lang="en")
         elif ext in text_extensions or ext == 'dockerfile':
             logger.info(f"Using SentenceChunker for text in {file_path}")
             chunker = SentenceChunker(
                 tokenizer_or_token_counter="character",
                 chunk_size=chunk_size,
-                chunk_overlap=128,
+                chunk_overlap=overlap,
                 min_sentences_per_chunk=1
             )
-        elif ext in ignore_extensions:
-            # logger.info(f"Ignoring binary/config file: {file_path}")
-            return []
         else:
             logger.warning(
-                f"No specific chunker for '{ext}'. Using default text chunker."
+                f"No specific chunker for '{ext}'."
             )
-            chunker = RecursiveChunker(chunk_size=chunk_size)
+            return []
 
         # Chunk the content
         chunks = chunker.chunk(doc_content)

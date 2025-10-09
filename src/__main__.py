@@ -8,19 +8,17 @@ import requests
 from tqdm import tqdm
 from datetime import datetime
 from retrieval.search import Searcher
+from answering.answer import get_answer
+from src.utils import write_search_to_file, calculate_overlap_percentage, save_search_results_and_answer_to_json
 from ingestion.chunking import chunk_content
 from ingestion.indexing import create_bm25_index
 from ingestion.file_processing import get_all_files
-from core.ollama_request import OllamaRequest, Message
 from ingestion.file_processing import extract_files_from_questions
 from core.schemas import UnansweredQuestion, StudentSearchResults
-from core.schemas import StudentSearchResultsAndAnswer, MinimalAnswer
-
-API_URL = "http://localhost:11434/api/chat"
+from core.schemas import StudentSearchResultsAndAnswer, RagDataset
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.ERROR)
-# logger.setLevel(logging.ERROR)
+logging.basicConfig(level=logging.INFO)
 
 
 class RagCLI:
@@ -31,15 +29,16 @@ class RagCLI:
     """
 
     def __init__(self,
-                 repo_path="assets/vllm-0.10.1",
+                 repo_path="data/raw/vllm-0.10.1",
                  mode="full",
-                #  mode='selective',
+                 #  mode='selective',
                  questions_file=("data/questions.tsv"),
                  search_string="OpenAI compatible server",
-                 k=10,
+                 k=5,
                  search_dataset_path=(
                      "data/datasets/UnansweredQuestions/\
-                        Dataset_2025-09-21_valid_unanswered.json")
+                        Dataset_2025-09-21_valid_unanswered.json"),
+                 chunk_size=2000
                  ):
         self.repo_path = repo_path
         self.questions_file = questions_file
@@ -47,10 +46,13 @@ class RagCLI:
         self.search_string = search_string
         self.k = k
         self.search_dataset_path = search_dataset_path
+        self.chunk_size = chunk_size
+        if chunk_size > 2000:
+            raise ValueError("Chunk Size cannot exceed 2000.")
 
     def index(self):
         """
-        Ingest documents from a repository for indexing.
+        Fire CLI - Ingest documents from a repository for indexing.
         Uses the instance variables set during initialization.
         """
         logger.info("Ingesting documents...")
@@ -59,6 +61,7 @@ class RagCLI:
         logger.info(f"Questions file: {self.questions_file}")
 
         start_time = time.time()
+        logger.setLevel(ERROR)
         try:
             if self.mode == "selective":
                 # Load questions to find which files to process
@@ -66,24 +69,23 @@ class RagCLI:
                     self.questions_file)
             else:
                 # Get all files in repository
-
                 files_to_process = get_all_files(self.repo_path)
 
             chunks = []
             for file_path in tqdm(files_to_process, desc="Chunking files"):
                 # logger.info(f"Processing file: {file_path}")
-                chunks.extend(chunk_content(file_path))
+                chunks.extend(chunk_content(file_path, self.chunk_size))
 
-            # # 3. Create searchable index (using bm25s)
             create_bm25_index(chunks, "bm25s_indices/")
+
         except Exception as e:
             logger.error(f"Ingestion failed: {e}")
+
         finally:
             # this finally block always run..
             end_time = time.time()
             duration = end_time-start_time
             print(f"Created index in {duration:.2f} seconds")
-            
 
     def search(self, search_string=None, k=None):
         """
@@ -96,8 +98,8 @@ class RagCLI:
             k = self.k
         logger.info(f"Search query: {search_string}")
         logger.info(f"Number of top results to return: {k}")
-        search_string = "What command is used to start the\
-            vLLM OpenAI-compatible server?"
+        # search_string = "What command is used to start the\
+        #     vLLM OpenAI-compatible server?"
 
         try:
             searcher = Searcher(index_dir="bm25s_indices/")
@@ -110,6 +112,7 @@ class RagCLI:
             # and logger.info it
             if result:
                 logger.info(result.model_dump_json(indent=4))
+                write_search_to_file(result, "data/output/search_results")
             else:
                 logger.info("No results found.")
         except Exception as e:
@@ -125,21 +128,10 @@ class RagCLI:
         logger.info(f"Searching using dataset: {dataset_path}")
         try:
             with open(dataset_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            questions_data = data.get("rag_questions", [])
-            unanswered = [UnansweredQuestion(**item)
-                          for item in questions_data]
+                unanswered = RagDataset.model_validate_json(f.read())
             result = searcher.search_dataset(unanswered)
             if result:
-                output_dir = "data/results"
-                os.makedirs(output_dir, exist_ok=True)
-                current_date = datetime.now().strftime("%Y-%m-%d")
-                output_filename = f"search_results_{current_date}.json"
-                output_path = os.path.join(output_dir, output_filename)
-
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    f.write(result.model_dump_json(indent=4))
-                logger.info(f"Search results saved to {output_path}")
+                write_search_to_file(result, "data/output/search_results")
                 logger.info(result.model_dump_json(indent=4))
             else:
                 logger.info("No results found.")
@@ -147,44 +139,95 @@ class RagCLI:
         except Exception as e:
             logger.error(f"Failed collecting questions from dataset: {e}")
 
-    def evaluate(self, search_results_path, ground_truth_path):
+    def measure_recall_at_k_on_dataset(self, search_results_path,
+                                       ground_truth_path):
         """
         Evaluate search results by measuring recall@k on a dataset.
-
-                Args:
+        Args:
             search_results_path: Path to the search results JSON file
             ground_truth_path: Path to the ground
             truth/answered questions JSON file
         """
-        logger.info("📊 Measuring recall@k on dataset...")
-        logger.info(f"Search results: {search_results_path}")
-        logger.info(f"Ground truth: {ground_truth_path}")
-        # Implement recall@k evaluation logic here
-        logger.info("✅ Recall@k measurement completed!")
+        original_level = logger.level
+        logger.setLevel(logging.INFO)
+        
+        try:
+            logger.info("📊 Measuring recall@k on dataset (with overlap)...")
+            logger.info(f"Search results: {search_results_path}")
+            logger.info(f"Ground truth: {ground_truth_path}")
+            
+            with open(search_results_path, 'r', encoding='utf-8') as f:
+                search_data = StudentSearchResults.model_validate_json(f.read())
+            with open(ground_truth_path, 'r', encoding='utf-8') as f:
+                ground_truth_data = RagDataset.model_validate_json(f.read())
 
-    def generate(self, output_path=None):
-        """
-        Generate answers using the RAG system.
-        """
-        logger.info("Generating answers using RAG...")
-        if output_path:
-            logger.info(f"Output will be saved to: {output_path}")
-        else:
-            # Build the filename based on current date
-            current_date = datetime.now()
-            date_str = current_date.strftime("%Y-%m-%d")
-            filename = f"Dataset_{date_str}_valid.json"
-            # Create the full path
-            output_dir = "data/datasets/AnsweredQuestions"
-            output_path = os.path.join(output_dir, filename)
-            # Create directory if it doesn't exist
-            os.makedirs(output_dir, exist_ok=True)
-            logger.info("No output path provided, results will be ")
-            logger.info(f"saved to: {output_path}")
-        # Implement generation logic here
-        logger.info("Answer generation completed!")
+            ground_truth_map = {
+                item['question_id']: item.get('sources', [])
+                for item in ground_truth_data.get('rag_questions', [])
+            }
+            
+            # for each question I need to get the recall, append and at 
+            # the end do the average
+            quest_recall_scores = []
+            # go through my results and get the question_id to match it to 
+            # the ground_truth ones
+            for result in search_data.get('search_results', []):
+                question_id = result.get('question_id')
+                if question_id not in ground_truth_map:
+                    logger.warning(f"Question ID {question_id} from \
+                                   earch results not found in ground\
+                                   truth. Skipping.")
+                    continue
+                # these are the sources in the reference ground truth but 
+                # in this example it is actually mostly an array of one
+                ground_truth_sources = ground_truth_map[question_id]
+                # my sources are depending of the k variable when searching
+                retrieved_sources = result.get('retrieved_sources', [])
+                
+                # cannot continue without my ref
+                if not ground_truth_sources:
+                    continue
 
-    def answer(self, question, k=5):
+                number_found = 0
+                for gt_source in ground_truth_sources:
+                    is_found = False
+                    for ret_source in retrieved_sources:
+                        if gt_source['file_path'] == ret_source['file_path']:
+                            overlap = calculate_overlap_percentage(
+                                gt_source['first_character_index'],
+                                gt_source['last_character_index'],
+                                ret_source['first_character_index'],
+                                ret_source['last_character_index']
+                            )
+                            if overlap >= 5.0:
+                                is_found = True
+                                # because I dont need to find two same sources
+                                break
+                    # catching the break above
+                    if is_found:
+                        number_found += 1
+                
+                recall_for_question = number_found / len(ground_truth_sources)
+                quest_recall_scores.append(recall_for_question)
+
+            if not quest_recall_scores:
+                logger.error("No matching questions found to evaluate.")
+                return 0.0
+
+            # The final recall is the average of the recall over all questions
+            final_recall = sum(quest_recall_scores) / len(quest_recall_scores)
+            
+            logger.info(f"Final Recall Score (with >=5% overlap): {final_recall:.2%}")
+            logger.info("Recall@k measurement completed!")
+            return final_recall
+            
+        except Exception as e:
+            logger.error(f"Error evaluating recall: {e}", exc_info=True)
+            return 0.0
+        finally:
+            logger.setLevel(original_level)
+
+    def answer_one(self, question, k=5):
         """
         Answer a single question using the RAG system.
 
@@ -192,96 +235,66 @@ class RagCLI:
             question: The question to answer
             k: The number of top results to return
         """
-        logger.info("Answering a question using RAG...")
-        logger.info(f"Question: {question}")
-        # get context
-        searcher = Searcher(index_dir="bm25s_indices/")
-        search_results = searcher.search_one(query=question, k=k)
-        logger.info(
-            f"{search_results.question_id} \n"
-            f"{search_results.retrieved_sources}"
+        unansweredQuestion = UnansweredQuestion(question=question)
+        minimal_answer = get_answer(unansweredQuestion, k)
+
+        final_result = StudentSearchResultsAndAnswer(
+            search_results=[minimal_answer],
+            k=k
         )
-
-        # extract chunks
-        context_chunks = []
-
-        for source in search_results.retrieved_sources:
-            try:
-                with open(source.file_path, 'r', encoding='utf-8') as f:
-                    f.seek(source.first_character_index)
-                    content = f.read(
-                        source.last_character_index
-                        - source.first_character_index)
-                    context_chunks.append(content)
-            except Exception as e:
-                logger.error(f"Error reading file {source.file_path}: {e}")
-        if not context_chunks:
-            logger.error("Could not retrieve any content. Abort")
-            return
-
-        logger.info(f"Retrieved {len(context_chunks)} chunks")
-
-        logger.info("Generating answer...")
-        context_str = "\n\n---\n\n".join(context_chunks)
-
-        prompt = f"""
-        Use the following context to answer the question.
-        If the answer is not in the context, say you don't know.
-
-        Context:
-        {context_str}
-
-        Question: {question}
-        """
-        messages = [Message(role="user", content=prompt)]
         try:
-            data = OllamaRequest(
-                model="qwen3:0.6b",
-                messages=messages,
-                tools=[],
-                stream=False,
-            )
-            response = requests.post(
-                API_URL,
-                data=data.model_dump_json(),
-                headers={"Content-Type": "application/json"}
-            )
-            response.raise_for_status()
-            response_data = response.json()
-            answer_content = response_data['message']['content']
-
-            logger.info("\nAnswer:\n")
-            logger.info(answer_content)
-
-            # Create MinimalAnswer by combining search results
-            # and the new answer
-            minimal_answer = MinimalAnswer(
-                question_id=search_results.question_id,
-                retrieved_sources=search_results.retrieved_sources,
-                answer=answer_content
-            )
-
-            final_result = StudentSearchResultsAndAnswer(
-                search_results=[minimal_answer],
-                k=k
-            )
             output_dir = "data/output"
             os.makedirs(output_dir, exist_ok=True)
             current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             outputfilename = f"answer_result_{current_date}.json"
             output_path = os.path.join(output_dir, outputfilename)
-
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(final_result.model_dump_json(indent=4))
             logger.info(f"Answer and sources saved to {output_path}")
-
         except Exception as e:
             logger.error(f"Failed to get answer from LLM: {e}")
-        question = UnansweredQuestion(question=question)
-
         logger.info("Question answered!")
 
-
+    def answer_dataset(self, output_path=None):
+        """
+        Generate answers using the RAG system.
+        """
+        logger.info("Generating answers using RAG...")
+        dataset_path = "data/datasets/UnansweredQuestions/Dataset_2025-09-21_valid_unanswered.json"
+        
+        try:
+            with open(dataset_path, 'r', encoding='utf-8') as f:
+                dataset = RagDataset.model_validate_json(f.read())
+        except FileNotFoundError:
+            logger.error(f"Dataset file not found at: {dataset_path}")
+            return
+        except Exception as e:
+            logger.error(f"Failed to parse dataset file: {e}")
+            return
+        
+        start_time = time.time()
+        minimal_answers = []
+        original_level = logger.level
+        logger.setLevel(logging.ERROR)
+        try:
+            for question in tqdm(dataset.rag_questions):
+                minimal_answer = get_answer(question, k=self.k)
+                minimal_answers.append(minimal_answer)
+            # Structure the final results using the appropriate Pydantic model
+            final_result = StudentSearchResultsAndAnswer(
+                search_results=minimal_answers,
+                k=self.k
+            )
+            save_search_results_and_answer_to_json(final_result)
+        except Exception as e:
+            logger.error("Failed to generate answer for questions")
+            logger.error(f"'{question.question}': {e}")
+        finally:
+            logger.setLevel(original_level)
+            duration = time.time() - start_time
+            logger.info(f"Answered {len(minimal_answers)} questions ")
+            logger.info(f"in {duration:.2f}s")
+                        
 def main():
     """Main entry point for the CLI."""
     logger.info("🤘 Rage Against the Machine - RAG System")

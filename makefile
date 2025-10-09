@@ -23,16 +23,16 @@ search_dataset:
 	data/datasets/UnansweredQuestions/Dataset_2025-09-21_valid_unanswered.json
 
 evaluate:
-	@uv run python -m src evaluate \
-	data/output/search_results/Dataset_2025-09-21.json \
-	data/datasets/Dataset_2025-09-21_valid_answered.json
+	@uv run python -m src measure_recall_at_k_on_dataset \
+	data/output/search_results/search_results_2025-10-05_14-53-29.json \
+	data/datasets/AnsweredQuestions/Dataset_2025-09-21_valid_answered.json
 
 generate:
-	@uv run python -m src generate \
+	@uv run python -m src answer_dataset \
 	data/output/search_results/Dataset_2025-09-21_valid.json
 
 answer: 
-	@uv run python -m src answer "How to configure OpenAI server?" --k 10
+	@uv run python -m src answer_one "How to configure OpenAI server?" --k 10
 
 debug:
 	@uv run python -m pdb -m src

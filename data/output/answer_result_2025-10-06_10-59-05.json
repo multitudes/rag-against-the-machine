@@ -1,0 +1,36 @@
+{
+    "search_results": [
+        {
+            "question_id": "0dfb747f-52a9-4a56-985d-df171733de59",
+            "retrieved_sources": [
+                {
+                    "file_path": "data/raw/vllm-0.10.1/benchmarks/auto_tune/README.md",
+                    "first_character_index": 0,
+                    "last_character_index": 1140
+                },
+                {
+                    "file_path": "data/raw/vllm-0.10.1/examples/online_serving/chart-helm/values.yaml",
+                    "first_character_index": 1811,
+                    "last_character_index": 3330
+                },
+                {
+                    "file_path": "data/raw/vllm-0.10.1/examples/others/lmcache/README.md",
+                    "first_character_index": 0,
+                    "last_character_index": 2039
+                },
+                {
+                    "file_path": "data/raw/vllm-0.10.1/docs/deployment/frameworks/helm.md",
+                    "first_character_index": 3615,
+                    "last_character_index": 5625
+                },
+                {
+                    "file_path": "data/raw/vllm-0.10.1/examples/online_serving/openai_transcription_client.py",
+                    "first_character_index": 0,
+                    "last_character_index": 1352
+                }
+            ],
+            "answer": "You can configure the OpenAI server by setting the `openai` parameter in the script. Here's how:\n\n1. Set the `OpenAI` API key in the script.\n2. Configure the `audio` asset for the specified model.\n\nThe script will then perform synchronous and streaming transcription as required. Make sure to replace the `audio_path` and `client` parameters with your actual values."
+        }
+    ],
+    "k": 5
+}
