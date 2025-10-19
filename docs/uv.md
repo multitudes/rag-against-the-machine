@@ -7,10 +7,6 @@
 1. **Install `uv`** (if not already installed):
 ```zsh
 curl -LsSf https://astral.sh/uv/install.sh | sh
-# or
-pipx install uv
-# or
-pip install uv
 ```
 
 2. **Initialize a new uv project** (modern approach):
