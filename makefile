@@ -12,7 +12,7 @@ install:
 	fi
 	UV_LINK_MODE=copy uv sync
 
-index:
+ingest:
 	@uv run python -m src index 
 
 search:
@@ -34,20 +34,20 @@ generate:
 answer: 
 	@uv run python -m src answer_one "How to configure OpenAI server?" --k 10
 
-debug:
-	@uv run python -m pdb -m src
-
 clean:
 	@echo "Removing .venv"
 	@rm -rf .venv
 	@echo "Removing __pycache__"
-	@rm -rf src/__pycache__
-	@rm -rf llm_sdk/__pycache__
-
+	@rm -rf src/__pycache__ src/**/__pycache__
+	@echo "Removing .egg-info"
+	@rm -rf src/rage_against_the_machine.egg-info
+	@echo "Removing bm25s_indices"
+	@rm -rf bm25s_indices
+	
 lint:
 	flake8 src
 
 help:
 	@uv run python -m src --help
 
-PHONY: install run debug clean lint
+PHONY: install ingest search search_dataset evaluate generate answer clean lint help

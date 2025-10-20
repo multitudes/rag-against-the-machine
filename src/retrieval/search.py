@@ -46,7 +46,7 @@ class Searcher:
         """
         logger.info(f"Retrieving top-{k} results for query: ")
         logger.info(f"'{unansweredQuestion.question}'")
-        query_tokens = bm25s.tokenize(unansweredQuestion.question, 
+        query_tokens = bm25s.tokenize(unansweredQuestion.question,
                                       stemmer=self.stemmer)
 
         # Get top-k results as a tuple of (doc ids, scores).
@@ -76,7 +76,7 @@ class Searcher:
 
     def search_dataset(
             self,
-            questions: UnansweredQuestion,
+            dataset,
             k: int = 5
     ) -> StudentSearchResults:
         """
@@ -84,11 +84,12 @@ class Searcher:
         """
         logger.info("searching the dataset... ")
         search_results = []
-        for question in questions:
+        # Iterate over the rag_questions in the dataset
+        for question in dataset.rag_questions:
             logger.info(
                 f"Retrieving top-{k} results for question: "
                 f"'{question.question}'")
-            result = self.search_one(query=question.question, k=k)
+            result = self.search_one(unansweredQuestion=question, k=k)
             result.question_id = question.question_id
             search_results.append(result)
         logger.info(f"Found {len(search_results)} results")
@@ -96,8 +97,10 @@ class Searcher:
             search_results=search_results,
             k=k
         )
-    
-    def retrieve_context(self, search_results: MinimalSearchResults) -> List[str]:
+
+    def retrieve_context(
+            self, search_results: MinimalSearchResults
+    ) -> List[str]:
         """
         Reads the content of chunks from files based on search results.
         Used to create the context for a prompt

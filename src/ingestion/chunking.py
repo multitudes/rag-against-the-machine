@@ -8,6 +8,29 @@ from core.schemas import MinimalSource, ChunkSource
 
 logger = logging.getLogger(__name__)
 
+IGNORE_EXTENSIONS = [
+    "pdf", "zip", "so", "svg", "png", "eot", "ttf", "woff", "woff2",
+    "pylintrc", "ico", "jpg", "neuron", "nightly_torch", "ppc64le",
+    "rocm", "rocm_base", "s390x", "tpu", "xpu", "typed"
+]
+
+# Define language mapping for CodeChunker
+CODE_LANGUAGES = {
+    "py": "python", "pyi": "python",
+    "sh": "bash",
+    "cu": "cpp", "cuh": "cpp", "cpp": "cpp", "h": "cpp",
+    "hpp": "cpp", "inl": "cpp",
+    "css": "css",
+    "cmake": "cmake", "cmakelists.txt": "cmake",
+    "js": "javascript"
+}
+TEXT_EXTENSIONS = [
+    "txt", "toml", "yaml", "yml", "json", "license", "dco",
+    "manifest.in", "in", "j2", "jinja", "tpl", "jsonl", "patch", "env"
+]
+MARKDOWN_EXTENSIONS = ["md", "html", "rst"]
+
+
 def get_docs_for_file(file_path):
     ext = file_path.lower().rsplit('.', 1)[-1]
     chef = TextChef()
@@ -45,31 +68,9 @@ def chunk_content(
             # Handle files with no extension like 'Dockerfile'
             ext = file_path.split('/')[-1].lower()
 
-        ignore_extensions = [
-            "pdf", "zip", "so", "svg", "png", "eot", "ttf", "woff", "woff2",
-            "pylintrc", "ico", "jpg", "neuron", "nightly_torch", "ppc64le",
-            "rocm", "rocm_base", "s390x", "tpu", "xpu", "typed"
-        ]
-        if ext in ignore_extensions:
+        if ext in IGNORE_EXTENSIONS:
             logger.info(f"Ignoring binary/config file: {file_path}")
             return []
-        
-        # Define language mapping for CodeChunker
-        code_languages = {
-            "py": "python", "pyi": "python",
-            "sh": "bash",
-            "cu": "cpp", "cuh": "cpp", "cpp": "cpp", "h": "cpp",
-            "hpp": "cpp", "inl": "cpp",
-            "css": "css",
-            "cmake": "cmake", "cmakelists.txt": "cmake",
-            "js": "javascript"
-        }
-        text_extensions = [
-            "txt", "toml", "yaml", "yml", "json", "license", "dco",
-            "manifest.in", "in", "j2", "jinja", "tpl", "jsonl", "patch", "env"
-        ]
-        markdown_extensions = ["md", "html", "rst"]
-
         doc, _ = get_docs_for_file(file_path)
         doc_content = doc.content
 
@@ -78,8 +79,8 @@ def chunk_content(
             return []
 
         # Select the appropriate chunker based on file type
-        if ext in code_languages:
-            language = code_languages[ext]
+        if ext in CODE_LANGUAGES:
+            language = CODE_LANGUAGES[ext]
             logger.info(f"Using CodeChunker for\
                         {language} in {file_path}")
             chunker = CodeChunker(
@@ -88,11 +89,11 @@ def chunk_content(
                 chunk_size=chunk_size,
                 include_nodes=False
             )
-        elif ext in markdown_extensions:
+        elif ext in MARKDOWN_EXTENSIONS:
             logger.info(f"Using RecursiveChunker\
                         for markdown in {file_path}")
             chunker = RecursiveChunker.from_recipe("markdown", lang="en")
-        elif ext in text_extensions or ext == 'dockerfile':
+        elif ext in TEXT_EXTENSIONS or ext == 'dockerfile':
             logger.info(f"Using SentenceChunker for text in {file_path}")
             chunker = SentenceChunker(
                 tokenizer_or_token_counter="character",

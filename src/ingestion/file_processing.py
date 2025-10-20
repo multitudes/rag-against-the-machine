@@ -53,7 +53,7 @@ def get_all_files(repo_path: str) -> list[str]:
 
     for root, dirs, filenames in os.walk(repo_path):
         # Modify dirs in-place to skip excluded directories
-        dirs[:] = [d for d in dirs if not d.startswith('.') 
+        dirs[:] = [d for d in dirs if not d.startswith('.')
                    and d not in excluded_dirs]
 
         for filename in filenames:

@@ -1,4 +1,3 @@
-
 import logging
 import requests
 from retrieval.search import Searcher
@@ -54,7 +53,9 @@ def create_prompt(context_str: str, question: str) -> str:
     return prompt
 
 
-def get_answer(unansweredQuestion: UnansweredQuestion, k: int, ):
+def get_answer(
+    unansweredQuestion: UnansweredQuestion, k: int
+) -> MinimalAnswer:
     logger.info("Answering a question using RAG...")
     logger.info(f"Question: {unansweredQuestion.question}")
     # get context
