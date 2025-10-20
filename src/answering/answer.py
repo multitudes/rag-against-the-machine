@@ -3,8 +3,7 @@ import requests
 from retrieval.search import Searcher
 from core.ollama_request import OllamaRequest, Message
 from core.schemas import MinimalAnswer, UnansweredQuestion
-
-API_URL = "http://localhost:11434/api/chat"
+from core.config import OLLAMA_API_URL
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,7 @@ def calling_llm(prompt: str) -> str:
             stream=False,
         )
         response = requests.post(
-            API_URL,
+            OLLAMA_API_URL,
             data=data.model_dump_json(),
             headers={"Content-Type": "application/json"}
         )
@@ -30,8 +29,8 @@ def calling_llm(prompt: str) -> str:
         response_data = response.json()
         answer_content = response_data['message']['content']
 
-        logger.info("\nAnswer:\n")
-        logger.info(answer_content)
+        logger.debug("\nAnswer:\n")
+        logger.debug(answer_content)
         return answer_content
     except Exception as e:
         logger.error(f"Could not generate answer : {e}")
@@ -56,19 +55,19 @@ def create_prompt(context_str: str, question: str) -> str:
 def get_answer(
     unansweredQuestion: UnansweredQuestion, k: int
 ) -> MinimalAnswer:
-    logger.info("Answering a question using RAG...")
-    logger.info(f"Question: {unansweredQuestion.question}")
+    logger.debug("Answering a question using RAG...")
+    logger.debug(f"Question: {unansweredQuestion.question}")
     # get context
     searcher = Searcher(index_dir="bm25s_indices/")
     search_results = searcher.search_one(unansweredQuestion=unansweredQuestion,
                                          k=k)
-    logger.info(
+    logger.debug(
         f"{search_results.question_id} \n"
         f"{search_results.retrieved_sources}"
     )
     # extract chunks
     context_chunks = searcher.retrieve_context(search_results)
-    logger.info(f"Retrieved {len(context_chunks)} chunks")
+    logger.debug(f"Retrieved {len(context_chunks)} chunks")
     context_str = "\n\n---\n\n".join(context_chunks)
 
     prompt = create_prompt(context_str, unansweredQuestion.question)

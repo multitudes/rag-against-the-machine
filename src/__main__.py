@@ -3,10 +3,12 @@ import os
 import fire
 import time
 import logging
+import requests
 from tqdm import tqdm
 from datetime import datetime
 from retrieval.search import Searcher
 from answering.answer import get_answer
+from core.config import OLLAMA_HEALTH_URL
 from src.utils import write_search_to_file, calculate_overlap_percentage
 from src.utils import save_search_results_and_answer_to_json
 from ingestion.chunking import chunk_content
@@ -15,7 +17,6 @@ from ingestion.file_processing import get_all_files
 from ingestion.file_processing import extract_files_from_questions
 from core.schemas import UnansweredQuestion, StudentSearchResults
 from core.schemas import StudentSearchResultsAndAnswer, RagDataset
-
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
@@ -54,10 +55,10 @@ class RagCLI:
         Fire CLI - Ingest documents from a repository for indexing.
         Uses the instance variables set during initialization.
         """
-        logger.info("Ingesting documents...")
-        logger.info(f"Repository path: {self.repo_path}")
-        logger.info(f"Ingestion mode: {self.mode}")
-        logger.info(f"Questions file: {self.questions_file}")
+        logger.debug("Ingesting documents...")
+        logger.debug(f"Repository path: {self.repo_path}")
+        logger.debug(f"Ingestion mode: {self.mode}")
+        logger.debug(f"Questions file: {self.questions_file}")
 
         # Validate that the repository path exists
         if not os.path.exists(self.repo_path):
@@ -86,7 +87,7 @@ class RagCLI:
 
             chunks = []
             for file_path in tqdm(files_to_process, desc="Chunking files"):
-                # logger.info(f"Processing file: {file_path}")
+                # logger.debug(f"Processing file: {file_path}")
                 chunks.extend(chunk_content(file_path, self.chunk_size))
 
             if not chunks:
@@ -109,19 +110,18 @@ class RagCLI:
         """
         Search the indexed documents.
         """
-        logger.info("Searching documents...")
+        write_path = "data/output/search_results"
+        logger.debug("Searching documents...")
         if search_string is None:
             search_string = self.search_string
         if k is None:
             k = self.k
-        logger.info(f"Search query: {search_string}")
-        logger.info(f"Number of top results to return: {k}")
-        # search_string = "What command is used to start the\
-        #     vLLM OpenAI-compatible server?"
+        logger.debug(f"Search query: {search_string}")
+        logger.debug(f"Number of top results to return: {k}")
 
         # Check if index directory exists
         if not os.path.exists("bm25s_indices/"):
-            logger.error("Index directory not found. Please run 'index' "
+            logger.error("Index directory not found. Please run 'ingest' "
                          "command first.")
             return
 
@@ -135,16 +135,19 @@ class RagCLI:
                 search_results=[min_search_res],
                 k=k
             )
-            # Convert the Pydantic model to a pretty-logger.infoed JSON string
-            # and logger.info it
+            # Convert the Pydantic model to a pretty-logger.debuged JSON string
+            # and logger.debug it
             if result:
-                logger.info(result.model_dump_json(indent=4))
-                write_search_to_file(result, "data/output/search_results")
+                # logger.debug(result.model_dump_json(indent=4))
+                write_search_to_file(result, write_path)
             else:
-                logger.info("No results found.")
+                logger.debug("No results found.")
+            root_logger = logging.getLogger()
+            root_logger.setLevel(logging.INFO)
+            logger.info(f"Saved to file {write_path}")
         except FileNotFoundError as e:
             logger.error(f"Index files not found: {e}")
-            logger.error("Please run 'index' command first.")
+            logger.error("Please run 'ingest' command first.")
         except Exception as e:
             logger.error(f"Search failed: {e}")
 
@@ -152,12 +155,13 @@ class RagCLI:
         """
         Search using a dataset of questions.
         """
+        output_path = "data/output/search_results"
         if dataset_path is None:
             dataset_path = self.search_dataset_path
 
         # Check if index directory exists
         if not os.path.exists("bm25s_indices/"):
-            logger.error("Index directory not found. Please run 'index' "
+            logger.error("Index directory not found. Please run 'ingest' "
                          "command first.")
             return
 
@@ -171,13 +175,14 @@ class RagCLI:
             searcher = Searcher(index_dir="bm25s_indices/")
             with open(dataset_path, 'r', encoding='utf-8') as f:
                 unanswered = RagDataset.model_validate_json(f.read())
-            result = searcher.search_dataset(unanswered)
+            result = searcher.search_dataset(unanswered.rag_questions)
             if result:
-                write_search_to_file(result, "data/output/search_results")
-                logger.info(result.model_dump_json(indent=4))
+                write_search_to_file(result, output_path)
             else:
-                logger.info("No results found.")
-            return result
+                logger.debug("No results found.")
+            root_logger = logging.getLogger()
+            root_logger.setLevel(logging.INFO)
+            logger.info(f"Saved to file : {output_path}")
         except FileNotFoundError as e:
             logger.error(f"File not found: {e}")
         except Exception as e:
@@ -206,9 +211,9 @@ class RagCLI:
         logger.setLevel(logging.INFO)
 
         try:
-            logger.info("📊 Measuring recall@k on dataset (with overlap)...")
-            logger.info(f"Search results: {search_results_path}")
-            logger.info(f"Ground truth: {ground_truth_path}")
+            logger.debug("📊 Measuring recall@k on dataset (with overlap)...")
+            logger.debug(f"Search results: {search_results_path}")
+            logger.debug(f"Ground truth: {ground_truth_path}")
 
             with open(search_results_path, 'r', encoding='utf-8') as f:
                 search_data = StudentSearchResults.model_validate_json(
@@ -283,7 +288,6 @@ class RagCLI:
             logger.info(f"Final Recall Score (with >=5% overlap): "
                         f"{final_recall:.2%}")
             logger.info("Recall@k measurement completed!")
-            return final_recall
 
         except FileNotFoundError as e:
             logger.error(f"File not found: {e}")
@@ -297,14 +301,23 @@ class RagCLI:
     def answer_one(self, question, k=5):
         """
         Answer a single question using the RAG system.
-
         Args:
-            question: The question to answer
-            k: The number of top results to return
+            question (str): The question to answer.
+            k (int): The number of top results to return.
         """
+        # Check if Ollama is running before processing the dataset
+        try:
+            response = requests.get(
+                OLLAMA_HEALTH_URL, timeout=2)
+            response.raise_for_status()
+        except requests.exceptions.RequestException:
+            logger.error(
+                "Ollama is not running or not accessible")
+            logger.error("Please start Ollama before running this command.")
+            return
         # Check if index directory exists
         if not os.path.exists("bm25s_indices/"):
-            logger.error("Index directory not found. Please run 'index' "
+            logger.error("Index directory not found. Please run 'ingest' "
                          "command first.")
             return
 
@@ -323,19 +336,35 @@ class RagCLI:
             output_path = os.path.join(output_dir, outputfilename)
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(final_result.model_dump_json(indent=4))
+            logger.setLevel(logging.INFO)
             logger.info(f"Answer and sources saved to {output_path}")
             logger.info("Question answered!")
         except FileNotFoundError as e:
             logger.error(f"Required files not found: {e}")
-            logger.error("Please run 'index' command first.")
+            logger.error("Please run 'ingest' command first.")
         except Exception as e:
             logger.error(f"Failed to get answer from LLM: {e}")
 
     def answer_dataset(self, output_path=None):
         """
-        Generate answers using the RAG system.
+        Generate answers for a dataset of questions using the RAG system.
+        Args:
+            output_path (str, optional): Path to save
+            the answers. Defaults to None.
         """
-        logger.info("Generating answers using RAG...")
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.INFO)
+        # Check if Ollama is running before processing the dataset
+        try:
+            response = requests.get(
+                OLLAMA_HEALTH_URL, timeout=2)
+            response.raise_for_status()
+        except requests.exceptions.RequestException:
+            logger.error(
+                "Ollama is not running or not accessible")
+            logger.error("Please start Ollama before running this command.")
+            return
+        logger.debug("Generating answers using RAG...")
         dataset_path = (
             "data/datasets/UnansweredQuestions/"
             "Dataset_2025-09-21_valid_unanswered.json"
@@ -343,7 +372,7 @@ class RagCLI:
 
         # Check if index directory exists
         if not os.path.exists("bm25s_indices/"):
-            logger.error("Index directory not found. Please run 'index' "
+            logger.error("Index directory not found. Please run 'ingest' "
                          "command first.")
             return
 
@@ -380,14 +409,20 @@ class RagCLI:
         finally:
             logger.setLevel(original_level)
             duration = time.time() - start_time
-            logger.info(f"Answered {len(minimal_answers)} questions ")
-            logger.info(f"in {duration:.2f}s")
+            logger.debug(f"Answered {len(minimal_answers)} questions ")
+            logger.debug(f"in {duration:.2f}s")
 
 
 def main():
-    """Main entry point for the CLI."""
-    logger.info("🤘 Rage Against the Machine - RAG System")
-    fire.Fire(RagCLI)
+    """
+    Main entry point for the CLI.
+    Initializes and runs the RagCLI using Fire.
+    """
+    try:
+        logger.debug("🤘 Rage Against the Machine - RAG System")
+        fire.Fire(RagCLI)
+    except KeyboardInterrupt:
+        print("\nInterrupted by user. Exiting.")
 
 
 if __name__ == "__main__":

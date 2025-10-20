@@ -1,9 +1,10 @@
-from chonkie import TextChef, MarkdownChef, SentenceChunker
-from typing import List
+import os
 import logging
-from chonkie import RecursiveChunker
+from typing import List
 from chonkie import CodeChunker
+from chonkie import RecursiveChunker
 from core.schemas import MinimalSource, ChunkSource
+from chonkie import TextChef, MarkdownChef, SentenceChunker
 
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,11 @@ def get_docs_for_file(file_path):
     chef = TextChef()
     if ext == 'md':
         chef = MarkdownChef()
-    return chef.process(file_path), ext
+    try:
+        return chef.process(file_path), ext
+    except UnicodeDecodeError:
+        logger.info(f"File {file_path} is not valid UTF-8. Skipping.")
+        return None, ext
 
 
 def chunk_content(
@@ -55,7 +60,7 @@ def chunk_content(
     Returns:
         List of chunk dictionaries.
     """
-    logger.info(f"Processing file with Chonkie: {file_path}")
+    logger.debug(f"Processing file with Chonkie: {file_path}")
     chunks = []
     try:
         parts = file_path.lower().rsplit('.', 1)
@@ -65,24 +70,26 @@ def chunk_content(
             if name.endswith("cmakelists"):
                 ext = "cmakelists.txt"
         else:
-            # Handle files with no extension like 'Dockerfile'
-            ext = file_path.split('/')[-1].lower()
+            filename = os.path.basename(file_path).lower()
+            ext = filename
 
         if ext in IGNORE_EXTENSIONS:
-            logger.info(f"Ignoring binary/config file: {file_path}")
+            logger.debug(f"Ignoring binary/config file: {file_path}")
             return []
         doc, _ = get_docs_for_file(file_path)
+        if doc is None:
+            # get_docs_for_file already logged the error
+            return []
         doc_content = doc.content
 
         if not doc_content:
-            logger.warning(f"No content extracted from {file_path}. Skipping.")
+            logger.debug(f"No content extracted from {file_path}. Skipping.")
             return []
 
         # Select the appropriate chunker based on file type
         if ext in CODE_LANGUAGES:
             language = CODE_LANGUAGES[ext]
-            logger.info(f"Using CodeChunker for\
-                        {language} in {file_path}")
+            logger.debug(f"Using CodeChunker for {language} in {file_path}")
             chunker = CodeChunker(
                 language=language,
                 tokenizer_or_token_counter="character",
@@ -90,11 +97,10 @@ def chunk_content(
                 include_nodes=False
             )
         elif ext in MARKDOWN_EXTENSIONS:
-            logger.info(f"Using RecursiveChunker\
-                        for markdown in {file_path}")
+            logger.debug(f"Using RecursiveChunker for markdown in {file_path}")
             chunker = RecursiveChunker.from_recipe("markdown", lang="en")
         elif ext in TEXT_EXTENSIONS or ext == 'dockerfile':
-            logger.info(f"Using SentenceChunker for text in {file_path}")
+            logger.debug(f"Using SentenceChunker for text in {file_path}")
             chunker = SentenceChunker(
                 tokenizer_or_token_counter="character",
                 chunk_size=chunk_size,
@@ -102,15 +108,12 @@ def chunk_content(
                 min_sentences_per_chunk=1
             )
         else:
-            logger.warning(
-                f"No specific chunker for '{ext}'."
-            )
+            logger.debug(f"No specific chunker for '{ext}'.")
             return []
 
-        # Chunk the content
         chunks = chunker.chunk(doc_content)
 
-        logger.info(f"Found {len(chunks)} chunks in {file_path}.")
+        logger.debug(f"Found {len(chunks)} chunks in {file_path}.")
         complete_chunks = []
         for chunk in chunks:
             source_obj = MinimalSource(

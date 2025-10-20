@@ -17,8 +17,15 @@ class Searcher:
 
     def __init__(self, index_dir: str = "bm25s_indices"):
         """
+        Initialize the Searcher, loading the BM25 index and metadata.
+        Suppresses bm25s INFO logs only.
         """
-        logger.info("Using memory-mapped index (mmap) to reduce memory usage.")
+        # Suppress all INFO logs from the root logger only
+        # during bm25s.BM25.load
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.WARNING)
+        logger.debug(
+            "Using memory-mapped index (mmap) to reduce memory usage.")
         if not os.path.exists(index_dir):
             raise FileNotFoundError("BM25 files missing")
         metadata_path = os.path.join(index_dir, "metadata.json")
@@ -30,12 +37,12 @@ class Searcher:
             index_dir, mmap=True, load_corpus=True)
         self.stemmer = Stemmer.Stemmer("english")
         self.corpus = self.retriever.corpus
-        logger.info(
+        logger.debug(
             f"BM25 index and corpus with {len(self.corpus)} documents loaded.")
 
         with open(metadata_path, "r", encoding="utf-8") as f:
             self.metadata = json.load(f)
-        logger.info(f"Loaded metadata for {len(self.metadata)} chunks.")
+        logger.debug(f"Loaded metadata for {len(self.metadata)} chunks.")
 
     def search_one(self,
                    unansweredQuestion: UnansweredQuestion,
@@ -44,8 +51,8 @@ class Searcher:
         """
         Performs a search and returns a structured StudentSearchResults object.
         """
-        logger.info(f"Retrieving top-{k} results for query: ")
-        logger.info(f"'{unansweredQuestion.question}'")
+        logger.debug(f"Retrieving top-{k} results for query: ")
+        logger.debug(f"'{unansweredQuestion.question}'")
         query_tokens = bm25s.tokenize(unansweredQuestion.question,
                                       stemmer=self.stemmer)
 
@@ -55,12 +62,12 @@ class Searcher:
         # The documents are returned as a numpy array of shape (n_queries, k)
         retrieved_sources = []
         for i in range(results.shape[1]):
-            logger.info(f"score {i+1}: {scores[0, i]}")
-            # logger.info(f"Rank {i+1}: {results[0, i]['text'][:20]}...")
+            logger.debug(f"score {i+1}: {scores[0, i]}")
+            # logger.debug(f"Rank {i+1}: {results[0, i]['text'][:20]}...")
             meta_idx = results[0, i]['id']
             meta = self.metadata[meta_idx]
             meta_text = results[0, i]['text']
-            logger.info(f"Rank {i+1}: {meta_text[:40]}")
+            logger.debug(f"Rank {i+1}: {meta_text[:40]}")
 
             min_src = MinimalSource(
                 file_path=meta['file_path'],
@@ -68,7 +75,7 @@ class Searcher:
                 last_character_index=meta['last_character_index']
             )
             retrieved_sources.append(min_src)
-        logger.info(f"min srcs are {len(retrieved_sources)}")
+        logger.debug(f"min srcs are {len(retrieved_sources)}")
         return MinimalSearchResults(
             question_id=unansweredQuestion.question_id,
             retrieved_sources=retrieved_sources
@@ -76,23 +83,23 @@ class Searcher:
 
     def search_dataset(
             self,
-            dataset,
+            questions: List[UnansweredQuestion],
             k: int = 5
     ) -> StudentSearchResults:
         """
         Performs a search and returns a structured StudentSearchResults object.
         """
-        logger.info("searching the dataset... ")
+        logger.debug("searching the dataset... ")
         search_results = []
         # Iterate over the rag_questions in the dataset
-        for question in dataset.rag_questions:
-            logger.info(
+        for question in questions:
+            logger.debug(
                 f"Retrieving top-{k} results for question: "
                 f"'{question.question}'")
             result = self.search_one(unansweredQuestion=question, k=k)
             result.question_id = question.question_id
             search_results.append(result)
-        logger.info(f"Found {len(search_results)} results")
+        logger.debug(f"Found {len(search_results)} results")
         return StudentSearchResults(
             search_results=search_results,
             k=k
@@ -115,7 +122,7 @@ class Searcher:
                         - source.first_character_index)
                     context_chunks.append(content)
             except Exception as e:
-                logger.error(f"Error reading file {source.file_path}: {e}")
+                logger.info(f"Error reading file {source.file_path}: {e}")
         if not context_chunks:
             logger.error("Could not retrieve any content. Abort")
         return context_chunks
