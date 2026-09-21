@@ -58,6 +58,44 @@ def get_docs_for_file(
         return None, ext
 
 
+def _enforce_max_size(
+    chunks: List[ChunkSource], max_size: int
+) -> List[ChunkSource]:
+    """Split any chunk whose text exceeds max_size into smaller pieces.
+
+    This is a hard safety net for cases where the primary chunker cannot
+    split an AST node or paragraph smaller than max_size (e.g. a very
+    long function body). Character indices are adjusted to stay consistent
+    with the original file so the moulinette overlap check still works.
+
+    Args:
+        chunks: Chunks produced by the primary chunker.
+        max_size: Maximum allowed character length per chunk.
+
+    Returns:
+        List of chunks all guaranteed to be <= max_size characters.
+    """
+    result: List[ChunkSource] = []
+    for chunk in chunks:
+        if len(chunk.text) <= max_size:
+            result.append(chunk)
+            continue
+        # Naive character split — preserves correct file offsets
+        base = chunk.source.first_character_index
+        text = chunk.text
+        for i in range(0, len(text), max_size):
+            sub_text = text[i:i + max_size]
+            result.append(ChunkSource(
+                text=sub_text,
+                source=MinimalSource(
+                    file_path=chunk.source.file_path,
+                    first_character_index=base + i,
+                    last_character_index=base + i + len(sub_text),
+                ),
+            ))
+    return result
+
+
 def chunk_content(
         file_path: str,
         chunk_size: int = 2048,
@@ -142,11 +180,14 @@ def chunk_content(
                 last_character_index=chunk.end_index
             )
             complete_chunks.append(
-                ChunkSource(
-                    text=(chunk.text),
-                    source=source_obj)
+                ChunkSource(text=chunk.text, source=source_obj)
             )
-        return complete_chunks
+
+        # Hard safety net: split any chunk that still exceeds chunk_size.
+        # CodeChunker preserves AST nodes so a single large function may
+        # exceed the limit — the moulinette rejects the whole output if
+        # any source is longer than max_context_length (2000 chars).
+        return _enforce_max_size(complete_chunks, chunk_size)
 
     except Exception as e:
         logger.error(f"Could not process file {file_path}: {e} ")
