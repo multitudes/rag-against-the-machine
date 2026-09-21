@@ -208,19 +208,23 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 .DS_Store
-bm25s_indices/data.csc.index.npy
-bm25s_indices/indices.csc.index.npy
-bm25s_indices/indptr.csc.index.npy
-bm25s_indices/metadata.json
-bm25s_indices/params.index.json
-bm25s_indices/stopwords.tokenizer.json
-bm25s_indices/vocab.index.json
-bm25s_indices/vocab.tokenizer.json
-bm25s_indices/corpus.jsonl
-bm25s_indices/corpus.mmindex.json
-data/results/search_results_2025-10-02.json
-CODE_REVIEW.md
-rag assets/datasets_public.zip
-.gitignore
-rag assets/vllm-0.10.1.zip
-rag assets/README.md
+
+# ── Project-specific ───────────────────────────────────────────────────────────
+
+# Generated BM25 index (data/processed/ is the new location)
+data/processed/
+
+# Generated search & answer outputs (keep the scoped subdirs via .gitkeep)
+data/output/search_results/UnansweredQuestions/*.json
+data/output/search_results/AnsweredQuestions/*.json
+data/output/search_results_and_answer/UnansweredQuestions/*.json
+data/output/search_results_and_answer/AnsweredQuestions/*.json
+
+# Raw corpus — too large for git (evaluator provides it)
+data/raw/vllm-0.10.1/
+
+# Old index location (no longer used)
+bm25s_indices/
+
+# Subject assets (not part of the submission)
+rag assets/

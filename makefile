@@ -58,14 +58,14 @@ search:
 
 search_dataset:
 	$(PYTHON) -m src search_dataset \
-		--dataset_path data/datasets/UnansweredQuestions/Dataset_2025-09-21_valid_unanswered.json \
+		--dataset_path data/datasets/UnansweredQuestions/dataset_docs_public.json \
 		--k 10 \
 		--save_directory data/output/search_results/UnansweredQuestions
 
 evaluate:
 	$(PYTHON) -m src evaluate \
-		--student_search_results_path data/output/search_results/UnansweredQuestions/Dataset_2025-09-21_valid_unanswered.json \
-		--dataset_path data/datasets/AnsweredQuestions/Dataset_2025-09-21_valid_answered.json
+		--student_search_results_path data/output/search_results/UnansweredQuestions/dataset_docs_public.json \
+		--dataset_path data/datasets/AnsweredQuestions/dataset_docs_public.json
 
 answer:
 	$(PYTHON) -m src answer "How to configure OpenAI server?" --k 10
