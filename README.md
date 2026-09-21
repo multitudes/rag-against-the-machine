@@ -218,12 +218,10 @@ uv run python -m src answer "What models does vLLM support?" --k 5
 
 Benchmarked on the public evaluation datasets with `--max_chunk_size 2000` and `--k 10`:
 
-| Dataset | Recall@1 | Recall@3 | Recall@5 | Recall@10 | Target |
-|---|---|---|---|---|---|
-| Docs | — | — | — | — | ≥ 80 % |
-| Code | — | — | — | — | ≥ 50 % |
-
-*(Scores will be filled in after the full evaluation run.)*
+| Dataset | Recall@1 | Recall@3 | Recall@5 | Recall@10 | Target | Status |
+|---|---|---|---|---|---|---|
+| Docs | 52.0 % | 78.0 % | **84.0 %** | 89.0 % | ≥ 80 % | ✅ |
+| Code | 33.3 % | 50.5 % | **54.5 %** | 63.6 % | ≥ 50 % | ✅ |
 
 **Observations:**
 - Markdown chunking with `RecursiveChunker` significantly improves docs recall compared
