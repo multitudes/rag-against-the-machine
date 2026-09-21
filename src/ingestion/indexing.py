@@ -4,12 +4,18 @@ import bm25s
 import Stemmer
 import logging
 from typing import List
+from core.schemas import ChunkSource
 
 
 logger = logging.getLogger(__name__)
 
 
-def create_bm25_index(all_chunks: List, index_dir: str):
+DEFAULT_INDEX_DIR = "data/processed"
+
+
+def create_bm25_index(
+    all_chunks: List[ChunkSource], index_dir: str = DEFAULT_INDEX_DIR
+) -> None:
     """
     Creates and saves a BM25 index from a list of text chunks.
 

@@ -1,53 +1,77 @@
+# Variables
+UV      := uv
+PYTHON  := $(UV) run python
+MYPY    := $(UV) run mypy
+FLAKE8  := $(UV) run flake8
+PYTEST  := $(UV) run pytest
+
+# ── Mandatory rules ────────────────────────────────────────────────────────────
+
 install:
-	@command -v uv >/dev/null 2>&1 || { \
-		echo "uv not found. Installing..."; \
-		curl -LsSf https://astral.sh/uv/install.sh | sh; \
+	@command -v $(UV) >/dev/null 2>&1 || { \
+		echo "Error: 'uv' is required but not installed."; \
+		echo "Please install uv before running setup (see README.md)."; \
+		exit 1; \
 	}
-	@echo "uv version: $$(uv --version)"
+	@echo "uv version: $$($(UV) --version)"
 	@if [ ! -f pyproject.toml ]; then \
-		uv init; \
-		echo "uv project initialized. Edit pyproject.toml if needed"; \
-	else \
-		echo "uv project already initialized"; \
+		echo "Initializing new uv project..."; \
+		$(UV) init; \
 	fi
-	UV_LINK_MODE=copy uv sync
+	$(UV) sync
 
-ingest:
-	@uv run python -m src index 
+run:
+	$(PYTHON) -m src index --max_chunk_size 2000
 
-search:
-	@uv run python -m src search "OpenAI compatible server" --k 10
+debug:
+	$(PYTHON) -m pdb -m src index --max_chunk_size 2000
 
-search_dataset:
-	@uv run python -m src search_dataset \
-	data/datasets/UnansweredQuestions/Dataset_2025-09-21_valid_unanswered.json
+lint:
+	$(FLAKE8) .
+	$(MYPY) .
 
-evaluate:
-	@uv run python -m src measure_recall_at_k_on_dataset \
-	data/output/search_results/search_results_2025-10-05_14-53-29.json \
-	data/datasets/AnsweredQuestions/Dataset_2025-09-21_valid_answered.json
-
-generate:
-	@uv run python -m src answer_dataset \
-	data/output/search_results/Dataset_2025-09-21_valid.json
-
-answer: 
-	@uv run python -m src answer_one "How to configure OpenAI server?" --k 10
+lint-strict:
+	$(FLAKE8) .
+	$(MYPY) . --strict
 
 clean:
 	@echo "Removing .venv"
 	@rm -rf .venv
 	@echo "Removing __pycache__"
-	@rm -rf src/__pycache__ src/**/__pycache__
-	@echo "Removing .egg-info"
-	@rm -rf src/rage_against_the_machine.egg-info
-	@echo "Removing bm25s_indices"
-	@rm -rf bm25s_indices
-	
-lint:
-	flake8 src
+	@find . -type d -name '__pycache__' -not -path './.venv/*' -exec rm -rf {} +
+	@echo "Removing .mypy_cache"
+	@rm -rf .mypy_cache
+	@echo "Removing data/processed (index)"
+	@rm -rf data/processed
+
+fclean: clean
+	@echo "Removing Hugging Face Hub model cache (~/.cache/huggingface/hub)..."
+	rm -rf "$(HOME)/.cache/huggingface/hub"
+
+# ── Convenience shortcuts (not part of the graded interface) ──────────────────
+
+index:
+	$(PYTHON) -m src index --max_chunk_size 2000
+
+search:
+	$(PYTHON) -m src search "OpenAI compatible server" --k 10
+
+search_dataset:
+	$(PYTHON) -m src search_dataset \
+		--dataset_path data/datasets/UnansweredQuestions/Dataset_2025-09-21_valid_unanswered.json \
+		--k 10 \
+		--save_directory data/output/search_results/UnansweredQuestions
+
+evaluate:
+	$(PYTHON) -m src evaluate \
+		--student_search_results_path data/output/search_results/UnansweredQuestions/Dataset_2025-09-21_valid_unanswered.json \
+		--dataset_path data/datasets/AnsweredQuestions/Dataset_2025-09-21_valid_answered.json
+
+answer:
+	$(PYTHON) -m src answer "How to configure OpenAI server?" --k 10
 
 help:
-	@uv run python -m src --help
+	$(PYTHON) -m src --help
 
-PHONY: install ingest search search_dataset evaluate generate answer clean lint help
+.PHONY: install run debug lint lint-strict clean fclean \
+        index search search_dataset evaluate answer help

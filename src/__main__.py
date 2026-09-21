@@ -1,425 +1,416 @@
-# src/__main__.py
+"""Main entry point for the RAG CLI."""
 import os
-import fire
+import json
 import time
 import logging
 import requests
+import fire
 from tqdm import tqdm
-from datetime import datetime
 from retrieval.search import Searcher
-from answering.answer import get_answer
+from answering.answer import get_answer, answer_from_search_result
 from core.config import OLLAMA_HEALTH_URL
-from src.utils import write_search_to_file, calculate_overlap_percentage
-from src.utils import save_search_results_and_answer_to_json
 from ingestion.chunking import chunk_content
 from ingestion.indexing import create_bm25_index
 from ingestion.file_processing import get_all_files
-from ingestion.file_processing import extract_files_from_questions
-from core.schemas import UnansweredQuestion, StudentSearchResults
-from core.schemas import StudentSearchResultsAndAnswer, RagDataset
+from core.schemas import (
+    UnansweredQuestion,
+    StudentSearchResults,
+    StudentSearchResultsAndAnswer,
+    RagDataset,
+)
+from utils import calculate_overlap_percentage
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+DEFAULT_INDEX_DIR = "data/processed"
+DEFAULT_REPO_PATH = "data/raw/vllm-0.10.1"
+
 
 class RagCLI:
+    """CLI for the RAG (Retrieval-Augmented Generation) system.
+
+    Every command is invoked as:
+        uv run python -m src <command> [options]
     """
-    CLI for the RAG project.
-    The CLI will be called like
-    `uv run python -m src index`
-    """
 
-    def __init__(self,
-                 repo_path="data/raw/vllm-0.10.1",
-                 mode="full",
-                 #  mode='selective',
-                 questions_file=("data/questions.tsv"),
-                 search_string="OpenAI compatible server",
-                 k=5,
-                 search_dataset_path=(
-                     "data/datasets/UnansweredQuestions/\
-                        Dataset_2025-09-21_valid_unanswered.json"),
-                 chunk_size=2000
-                 ):
-        self.repo_path = repo_path
-        self.questions_file = questions_file
-        self.mode = mode
-        self.search_string = search_string
-        self.k = k
-        self.search_dataset_path = search_dataset_path
-        self.chunk_size = chunk_size
-        if chunk_size > 2000:
-            raise ValueError("Chunk Size cannot exceed 2000.")
+    # ------------------------------------------------------------------
+    # index
+    # ------------------------------------------------------------------
 
-    def index(self):
+    def index(
+        self,
+        max_chunk_size: int = 2000,
+        repo_path: str = DEFAULT_REPO_PATH,
+        index_dir: str = DEFAULT_INDEX_DIR,
+    ) -> None:
+        """Ingest data/raw/ and build the BM25 index under data/processed/.
+
+        Args:
+            max_chunk_size: Maximum characters per chunk (default 2000).
+            repo_path: Root directory of the corpus to index.
+            index_dir: Output directory for the index files.
         """
-        Fire CLI - Ingest documents from a repository for indexing.
-        Uses the instance variables set during initialization.
-        """
-        logger.debug("Ingesting documents...")
-        logger.debug(f"Repository path: {self.repo_path}")
-        logger.debug(f"Ingestion mode: {self.mode}")
-        logger.debug(f"Questions file: {self.questions_file}")
-
-        # Validate that the repository path exists
-        if not os.path.exists(self.repo_path):
-            logger.error(f"Repository path does not exist: {self.repo_path}")
+        if max_chunk_size > 2000:
+            logger.error(
+                "max_chunk_size cannot exceed 2000 "
+                "(moulinette rejects longer sources).")
+            return
+        if max_chunk_size <= 0:
+            logger.error("max_chunk_size must be a positive integer.")
+            return
+        if not os.path.exists(repo_path):
+            logger.error(f"Repository path does not exist: {repo_path}")
             return
 
+        logger.info(f"Indexing corpus at '{repo_path}' "
+                    f"(max_chunk_size={max_chunk_size}) …")
         start_time = time.time()
-        original_level = logger.level
-        logger.setLevel(logging.ERROR)
         try:
-            if self.mode == "selective":
-                # Load questions to find which files to process
-                if not os.path.exists(self.questions_file):
-                    logger.error(
-                        f"File does not exist: {self.questions_file}")
-                    return
-                files_to_process = extract_files_from_questions(
-                    self.questions_file)
-            else:
-                # Get all files in repository
-                files_to_process = get_all_files(self.repo_path)
-
+            files_to_process = get_all_files(repo_path)
             if not files_to_process:
-                logger.warning("No files found to process")
+                logger.warning("No files found to process.")
                 return
 
             chunks = []
             for file_path in tqdm(files_to_process, desc="Chunking files"):
-                # logger.debug(f"Processing file: {file_path}")
-                chunks.extend(chunk_content(file_path, self.chunk_size))
+                chunks.extend(chunk_content(file_path, max_chunk_size))
 
             if not chunks:
-                logger.warning("No chunks created from files")
+                logger.warning("No chunks created from files.")
                 return
 
-            create_bm25_index(chunks, "bm25s_indices/")
+            os.makedirs(index_dir, exist_ok=True)
+            create_bm25_index(chunks, index_dir)
 
         except Exception as e:
-            logger.error(f"Ingestion failed: {e}")
+            logger.error(f"Indexing failed: {e}")
+            return
 
-        finally:
-            # this finally block always run..
-            logger.setLevel(original_level)
-            end_time = time.time()
-            duration = end_time-start_time
-            print(f"Created index in {duration:.2f} seconds")
+        duration = time.time() - start_time
+        print(f"Ingestion complete! Indices saved under {index_dir} "
+              f"({duration:.1f}s)")
 
-    def search(self, search_string=None, k=None):
+    # ------------------------------------------------------------------
+    # search
+    # ------------------------------------------------------------------
+
+    def search(
+        self,
+        query: str,
+        k: int = 5,
+        index_dir: str = DEFAULT_INDEX_DIR,
+    ) -> None:
+        """Return the top-k sources for a single query.
+
+        Args:
+            query: The search query string.
+            k: Number of results to return (default 5).
+            index_dir: Path to the BM25 index directory.
         """
-        Search the indexed documents.
-        """
-        write_path = "data/output/search_results"
-        logger.debug("Searching documents...")
-        if search_string is None:
-            search_string = self.search_string
-        if k is None:
-            k = self.k
-        logger.debug(f"Search query: {search_string}")
-        logger.debug(f"Number of top results to return: {k}")
-
-        # Check if index directory exists
-        if not os.path.exists("bm25s_indices/"):
-            logger.error("Index directory not found. Please run 'ingest' "
-                         "command first.")
+        if not query or not query.strip():
+            logger.error("Query cannot be empty.")
+            return
+        if k <= 0:
+            logger.error("k must be a positive integer.")
+            return
+        if not os.path.exists(index_dir):
+            logger.error(
+                f"Index directory '{index_dir}' not found. "
+                "Please run 'index' first.")
             return
 
         try:
-            searcher = Searcher(index_dir="bm25s_indices/")
-            # Create an UnansweredQuestion object from the search string
-            unanswered_question = UnansweredQuestion(question=search_string)
-            min_search_res = searcher.search_one(
-                unansweredQuestion=unanswered_question, k=k)
-            result = StudentSearchResults(
-                search_results=[min_search_res],
-                k=k
-            )
-            # Convert the Pydantic model to a pretty-logger.debuged JSON string
-            # and logger.debug it
-            if result:
-                # logger.debug(result.model_dump_json(indent=4))
-                write_search_to_file(result, write_path)
-            else:
-                logger.debug("No results found.")
-            root_logger = logging.getLogger()
-            root_logger.setLevel(logging.INFO)
-            logger.info(f"Saved to file {write_path}")
+            searcher = Searcher(index_dir=index_dir)
+            unanswered = UnansweredQuestion(question=query)
+            result = searcher.search_one(unansweredQuestion=unanswered, k=k)
+            # Pretty-print the result to stdout
+            print(json.dumps(result.model_dump(), indent=2))
         except FileNotFoundError as e:
             logger.error(f"Index files not found: {e}")
-            logger.error("Please run 'ingest' command first.")
         except Exception as e:
             logger.error(f"Search failed: {e}")
 
-    def search_dataset(self, dataset_path=None):
-        """
-        Search using a dataset of questions.
-        """
-        output_path = "data/output/search_results"
-        if dataset_path is None:
-            dataset_path = self.search_dataset_path
+    # ------------------------------------------------------------------
+    # search_dataset
+    # ------------------------------------------------------------------
 
-        # Check if index directory exists
-        if not os.path.exists("bm25s_indices/"):
-            logger.error("Index directory not found. Please run 'ingest' "
-                         "command first.")
+    def search_dataset(
+        self,
+        dataset_path: str,
+        k: int = 10,
+        save_directory: str = "data/output/search_results",
+        index_dir: str = DEFAULT_INDEX_DIR,
+    ) -> None:
+        """
+        Run search over a whole dataset and write a StudentSearchResults JSON.
+
+        Args:
+            dataset_path: Path to the UnansweredQuestions JSON dataset.
+            k: Number of results per question (default 10).
+            save_directory: Directory to save the output JSON file.
+            index_dir: Path to the BM25 index directory.
+        """
+        if not os.path.exists(index_dir):
+            logger.error(
+                f"Index directory '{index_dir}' not found. "
+                "Please run 'index' first.")
             return
-
-        # Check if dataset file exists
         if not os.path.exists(dataset_path):
             logger.error(f"Dataset file not found: {dataset_path}")
             return
-
-        logger.info(f"Searching using dataset: {dataset_path}")
-        try:
-            searcher = Searcher(index_dir="bm25s_indices/")
-            with open(dataset_path, 'r', encoding='utf-8') as f:
-                unanswered = RagDataset.model_validate_json(f.read())
-            result = searcher.search_dataset(unanswered.rag_questions)
-            if result:
-                write_search_to_file(result, output_path)
-            else:
-                logger.debug("No results found.")
-            root_logger = logging.getLogger()
-            root_logger.setLevel(logging.INFO)
-            logger.info(f"Saved to file : {output_path}")
-        except FileNotFoundError as e:
-            logger.error(f"File not found: {e}")
-        except Exception as e:
-            logger.error(f"Failed collecting questions from dataset: {e}")
-
-    def measure_recall_at_k_on_dataset(self, search_results_path,
-                                       ground_truth_path):
-        """
-        Evaluate search results by measuring recall@k on a dataset.
-        Args:
-            search_results_path: Path to the search results JSON file
-            ground_truth_path: Path to the ground
-            truth/answered questions JSON file
-        """
-        # Validate input files exist
-        if not os.path.exists(search_results_path):
-            logger.error(f"Search results file not found: "
-                         f"{search_results_path}")
-            return 0.0
-
-        if not os.path.exists(ground_truth_path):
-            logger.error(f"Ground truth file not found: {ground_truth_path}")
-            return 0.0
-
-        original_level = logger.level
-        logger.setLevel(logging.INFO)
-
-        try:
-            logger.debug("📊 Measuring recall@k on dataset (with overlap)...")
-            logger.debug(f"Search results: {search_results_path}")
-            logger.debug(f"Ground truth: {ground_truth_path}")
-
-            with open(search_results_path, 'r', encoding='utf-8') as f:
-                search_data = StudentSearchResults.model_validate_json(
-                    f.read())
-            with open(ground_truth_path, 'r', encoding='utf-8') as f:
-                ground_truth_data = RagDataset.model_validate_json(f.read())
-
-            # Build a map of question_id to sources from ground truth
-            ground_truth_map = {}
-            for item in ground_truth_data.rag_questions:
-                # Check if item has sources (AnsweredQuestion)
-                if hasattr(item, 'sources'):
-                    ground_truth_map[item.question_id] = item.sources
-                else:
-                    ground_truth_map[item.question_id] = []
-
-            # for each question I need to get the recall, append and at
-            # the end do the average
-            quest_recall_scores = []
-            # go through my results and get the question_id to match it to
-            # the ground_truth ones
-            for result in search_data.search_results:
-                question_id = result.question_id
-                if question_id not in ground_truth_map:
-                    logger.warning(f"Question ID {question_id} from "
-                                   f"search results not found in ground "
-                                   f"truth. Skipping.")
-                    continue
-                # these are the sources in the reference ground truth but
-                # in this example it is actually mostly an array of one
-                ground_truth_sources = ground_truth_map[question_id]
-                # my sources are depending of the k variable when searching
-                retrieved_sources = result.retrieved_sources
-
-                # cannot continue without my ref
-                if not ground_truth_sources:
-                    continue
-
-                number_found = 0
-                for gt_source in ground_truth_sources:
-                    is_found = False
-                    for ret_source in retrieved_sources:
-                        if gt_source.file_path == ret_source.file_path:
-                            overlap = calculate_overlap_percentage(
-                                gt_source.first_character_index,
-                                gt_source.last_character_index,
-                                ret_source.first_character_index,
-                                ret_source.last_character_index
-                            )
-                            if overlap >= 5.0:
-                                is_found = True
-                                # because I dont need two same sources
-                                break
-                    # catching the break above
-                    if is_found:
-                        number_found += 1
-
-                recall_for_question = (
-                    number_found / len(ground_truth_sources)
-                )
-                quest_recall_scores.append(recall_for_question)
-
-            if not quest_recall_scores:
-                logger.error("No matching questions found to evaluate.")
-                return 0.0
-
-            # The final recall is the average of recall over all questions
-            final_recall = (
-                sum(quest_recall_scores) / len(quest_recall_scores)
-            )
-
-            logger.info(f"Final Recall Score (with >=5% overlap): "
-                        f"{final_recall:.2%}")
-            logger.info("Recall@k measurement completed!")
-
-        except FileNotFoundError as e:
-            logger.error(f"File not found: {e}")
-            return 0.0
-        except Exception as e:
-            logger.error(f"Error evaluating recall: {e}", exc_info=True)
-            return 0.0
-        finally:
-            logger.setLevel(original_level)
-
-    def answer_one(self, question, k=5):
-        """
-        Answer a single question using the RAG system.
-        Args:
-            question (str): The question to answer.
-            k (int): The number of top results to return.
-        """
-        # Check if Ollama is running before processing the dataset
-        try:
-            response = requests.get(
-                OLLAMA_HEALTH_URL, timeout=2)
-            response.raise_for_status()
-        except requests.exceptions.RequestException:
-            logger.error(
-                "Ollama is not running or not accessible")
-            logger.error("Please start Ollama before running this command.")
-            return
-        # Check if index directory exists
-        if not os.path.exists("bm25s_indices/"):
-            logger.error("Index directory not found. Please run 'ingest' "
-                         "command first.")
+        if k <= 0:
+            logger.error("k must be a positive integer.")
             return
 
-        try:
-            unansweredQuestion = UnansweredQuestion(question=question)
-            minimal_answer = get_answer(unansweredQuestion, k)
-
-            final_result = StudentSearchResultsAndAnswer(
-                search_results=[minimal_answer],
-                k=k
-            )
-            output_dir = "data/output"
-            os.makedirs(output_dir, exist_ok=True)
-            current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            outputfilename = f"answer_result_{current_date}.json"
-            output_path = os.path.join(output_dir, outputfilename)
-            with open(output_path, 'w', encoding='utf-8') as f:
-                f.write(final_result.model_dump_json(indent=4))
-            logger.setLevel(logging.INFO)
-            logger.info(f"Answer and sources saved to {output_path}")
-            logger.info("Question answered!")
-        except FileNotFoundError as e:
-            logger.error(f"Required files not found: {e}")
-            logger.error("Please run 'ingest' command first.")
-        except Exception as e:
-            logger.error(f"Failed to get answer from LLM: {e}")
-
-    def answer_dataset(self, output_path=None):
-        """
-        Generate answers for a dataset of questions using the RAG system.
-        Args:
-            output_path (str, optional): Path to save
-            the answers. Defaults to None.
-        """
-        root_logger = logging.getLogger()
-        root_logger.setLevel(logging.INFO)
-        # Check if Ollama is running before processing the dataset
-        try:
-            response = requests.get(
-                OLLAMA_HEALTH_URL, timeout=2)
-            response.raise_for_status()
-        except requests.exceptions.RequestException:
-            logger.error(
-                "Ollama is not running or not accessible")
-            logger.error("Please start Ollama before running this command.")
-            return
-        logger.debug("Generating answers using RAG...")
-        dataset_path = (
-            "data/datasets/UnansweredQuestions/"
-            "Dataset_2025-09-21_valid_unanswered.json"
-        )
-
-        # Check if index directory exists
-        if not os.path.exists("bm25s_indices/"):
-            logger.error("Index directory not found. Please run 'ingest' "
-                         "command first.")
-            return
-
-        # Check if dataset file exists
-        if not os.path.exists(dataset_path):
-            logger.error(f"Dataset file not found at: {dataset_path}")
-            return
-
+        logger.info(f"Searching dataset '{dataset_path}' with k={k} …")
         try:
             with open(dataset_path, 'r', encoding='utf-8') as f:
                 dataset = RagDataset.model_validate_json(f.read())
+
+            questions = [
+                q for q in dataset.rag_questions
+                if isinstance(q, UnansweredQuestion)
+            ]
+
+            searcher = Searcher(index_dir=index_dir)
+            result = StudentSearchResults(
+                search_results=[],
+                k=k,
+            )
+            results_list = []
+            for question in tqdm(questions, desc="Searching questions"):
+                res = searcher.search_one(
+                    unansweredQuestion=question, k=k)
+                results_list.append(res)
+            result = StudentSearchResults(search_results=results_list, k=k)
+
+            os.makedirs(save_directory, exist_ok=True)
+            filename = os.path.basename(dataset_path)
+            output_path = os.path.join(save_directory, filename)
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(result.model_dump_json(indent=4))
+            print(f"Saved student_search_results to {output_path}")
+
+        except FileNotFoundError as e:
+            logger.error(f"File not found: {e}")
         except Exception as e:
-            logger.error(f"Failed to parse dataset file: {e}")
+            logger.error(f"search_dataset failed: {e}")
+
+    # ------------------------------------------------------------------
+    # answer (single query)
+    # ------------------------------------------------------------------
+
+    def answer(
+        self,
+        query: str,
+        k: int = 5,
+        index_dir: str = DEFAULT_INDEX_DIR,
+    ) -> None:
+        """Answer a single query using the retrieved context.
+
+        Args:
+            query: The question to answer.
+            k: Number of sources to retrieve (default 5).
+            index_dir: Path to the BM25 index directory.
+        """
+        if not query or not query.strip():
+            logger.error("Query cannot be empty.")
+            return
+        if k <= 0:
+            logger.error("k must be a positive integer.")
+            return
+        if not os.path.exists(index_dir):
+            logger.error(
+                f"Index directory '{index_dir}' not found. "
+                "Please run 'index' first.")
+            return
+        if not self._check_ollama():
             return
 
-        start_time = time.time()
-        minimal_answers = []
-        original_level = logger.level
-        logger.setLevel(logging.ERROR)
         try:
-            for question in tqdm(dataset.rag_questions):
-                minimal_answer = get_answer(question, k=self.k)
-                minimal_answers.append(minimal_answer)
-            # Structure the final results using the appropriate Pydantic
-            # model
+            unanswered = UnansweredQuestion(question=query)
+            minimal_answer = get_answer(
+                unansweredQuestion=unanswered, k=k, index_dir=index_dir)
             final_result = StudentSearchResultsAndAnswer(
-                search_results=minimal_answers,
-                k=self.k
+                search_results=[minimal_answer],
+                k=k,
             )
-            save_search_results_and_answer_to_json(final_result)
+            print(final_result.model_dump_json(indent=2))
+        except FileNotFoundError as e:
+            logger.error(f"Required files not found: {e}")
         except Exception as e:
-            logger.error("Failed to generate answer for questions")
-            logger.error(f"'{question.question}': {e}")
-        finally:
-            logger.setLevel(original_level)
-            duration = time.time() - start_time
-            logger.debug(f"Answered {len(minimal_answers)} questions ")
-            logger.debug(f"in {duration:.2f}s")
+            logger.error(f"answer failed: {e}")
+
+    # ------------------------------------------------------------------
+    # answer_dataset
+    # ------------------------------------------------------------------
+
+    def answer_dataset(
+        self,
+        student_search_results_path: str,
+        save_directory: str = "data/output/search_results_and_answer",
+    ) -> None:
+        """Generate answers for a dataset from pre-computed search results.
+
+        Reads a StudentSearchResults JSON produced by search_dataset,
+        retrieves context from source files, calls the LLM for each
+        question, and writes a StudentSearchResultsAndAnswer JSON.
+
+        Args:
+            student_search_results_path: Path to StudentSearchResults JSON.
+            save_directory: Directory to save the output JSON file.
+        """
+        if not os.path.exists(student_search_results_path):
+            logger.error(
+                f"Search results file not found: "
+                f"{student_search_results_path}")
+            return
+        if not self._check_ollama():
+            return
+
+        try:
+            with open(
+                student_search_results_path, 'r', encoding='utf-8'
+            ) as f:
+                student_results = StudentSearchResults.model_validate_json(
+                    f.read())
+        except Exception as e:
+            logger.error(f"Failed to parse search results: {e}")
+            return
+
+        total = len(student_results.search_results)
+        logger.info(f"Loaded {total} questions …")
+
+        minimal_answers = []
+        try:
+            for search_result in tqdm(
+                student_results.search_results,
+                desc="Generating answers",
+            ):
+                minimal_answer = answer_from_search_result(search_result)
+                minimal_answers.append(minimal_answer)
+        except Exception as e:
+            logger.error(f"Answer generation failed: {e}")
+
+        final_result = StudentSearchResultsAndAnswer(
+            search_results=minimal_answers,
+            k=student_results.k,
+        )
+
+        os.makedirs(save_directory, exist_ok=True)
+        filename = os.path.basename(student_search_results_path)
+        output_path = os.path.join(save_directory, filename)
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(final_result.model_dump_json(indent=4))
+        print(
+            f"Processed {len(minimal_answers)} of {total} questions\n"
+            f"Saved student_search_results_and_answer to {output_path}")
+
+    # ------------------------------------------------------------------
+    # evaluate
+    # ------------------------------------------------------------------
+
+    def evaluate(
+        self,
+        student_search_results_path: str,
+        dataset_path: str,
+    ) -> None:
+        """Report recall@k against a ground-truth dataset (for local testing).
+
+        Note: the official recall@k used during the defence is computed by
+        the provided moulinette, not by this command.
+
+        Args:
+            student_search_results_path: Path to StudentSearchResults JSON.
+            dataset_path: Path to the AnsweredQuestions ground-truth JSON.
+        """
+        if not os.path.exists(student_search_results_path):
+            logger.error(
+                f"Search results file not found: "
+                f"{student_search_results_path}")
+            return
+        if not os.path.exists(dataset_path):
+            logger.error(
+                f"Ground truth file not found: {dataset_path}")
+            return
+
+        try:
+            with open(
+                student_search_results_path, 'r', encoding='utf-8'
+            ) as f:
+                search_data = StudentSearchResults.model_validate_json(
+                    f.read())
+            with open(dataset_path, 'r', encoding='utf-8') as f:
+                ground_truth_data = RagDataset.model_validate_json(f.read())
+        except Exception as e:
+            logger.error(f"Failed to load evaluation files: {e}")
+            return
+
+        # Build ground-truth map: question_id → list of sources
+        ground_truth_map = {}
+        for item in ground_truth_data.rag_questions:
+            if hasattr(item, 'sources'):
+                ground_truth_map[item.question_id] = item.sources
+
+        k = search_data.k
+        quest_recall_scores = []
+
+        for result in search_data.search_results:
+            qid = result.question_id
+            if qid not in ground_truth_map:
+                logger.warning(
+                    f"Question {qid} not in ground truth. Skipping.")
+                continue
+            gt_sources = ground_truth_map[qid]
+            if not gt_sources:
+                continue
+
+            number_found = 0
+            for gt_src in gt_sources:
+                for ret_src in result.retrieved_sources:
+                    if gt_src.file_path == ret_src.file_path:
+                        overlap = calculate_overlap_percentage(
+                            gt_src.first_character_index,
+                            gt_src.last_character_index,
+                            ret_src.first_character_index,
+                            ret_src.last_character_index,
+                        )
+                        if overlap >= 5.0:
+                            number_found += 1
+                            break
+            quest_recall_scores.append(
+                number_found / len(gt_sources))
+
+        if not quest_recall_scores:
+            logger.error("No matching questions found to evaluate.")
+            return
+
+        final_recall = sum(quest_recall_scores) / len(quest_recall_scores)
+        print(f"Recall@{k}: {final_recall:.3f} "
+              f"({final_recall:.1%}) over "
+              f"{len(quest_recall_scores)} questions")
+
+    # ------------------------------------------------------------------
+    # internal helpers
+    # ------------------------------------------------------------------
+
+    def _check_ollama(self) -> bool:
+        """Return True if the Ollama server is reachable, else log an error."""
+        try:
+            response = requests.get(OLLAMA_HEALTH_URL, timeout=2)
+            response.raise_for_status()
+            return True
+        except requests.exceptions.RequestException:
+            logger.error(
+                "Ollama is not running or not accessible. "
+                "Please start Ollama before running this command.")
+            return False
 
 
-def main():
-    """
-    Main entry point for the CLI.
-    Initializes and runs the RagCLI using Fire.
-    """
+def main() -> None:
+    """Main entry point — initialises and runs the RagCLI via Fire."""
     try:
-        logger.debug("🤘 Rage Against the Machine - RAG System")
         fire.Fire(RagCLI)
     except KeyboardInterrupt:
         print("\nInterrupted by user. Exiting.")

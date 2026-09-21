@@ -219,3 +219,8 @@ bm25s_indices/vocab.tokenizer.json
 bm25s_indices/corpus.jsonl
 bm25s_indices/corpus.mmindex.json
 data/results/search_results_2025-10-02.json
+CODE_REVIEW.md
+rag assets/datasets_public.zip
+.gitignore
+rag assets/vllm-0.10.1.zip
+rag assets/README.md

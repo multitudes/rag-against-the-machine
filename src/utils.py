@@ -1,7 +1,7 @@
 """
 Utility functions for the Rage Against the Machine RAG system.
-Includes functions for saving search results, calculating overlap, and output
-file management.
+Includes functions for saving search results, calculating overlap,
+and output file management.
 """
 import os
 import logging
@@ -11,7 +11,9 @@ from core.schemas import StudentSearchResults, StudentSearchResultsAndAnswer
 logger = logging.getLogger(__name__)
 
 
-def write_search_to_file(result: StudentSearchResults, output_dir: str):
+def write_search_to_file(
+    result: StudentSearchResults, output_dir: str
+) -> None:
     """
     Save StudentSearchResults to a JSON file in the specified output directory.
     The filename includes the current date and time for uniqueness.
@@ -28,7 +30,9 @@ def write_search_to_file(result: StudentSearchResults, output_dir: str):
     logger.debug(f"Search results saved to {output_path}")
 
 
-def calculate_overlap_percentage(start1, end1, start2, end2):
+def calculate_overlap_percentage(
+    start1: int, end1: int, start2: int, end2: int
+) -> float:
     """
     Calculate the percentage overlap between two character ranges.
     The overlap is measured relative to the length of the ground truth chunk.
@@ -58,8 +62,8 @@ def calculate_overlap_percentage(start1, end1, start2, end2):
 
 
 def save_search_results_and_answer_to_json(
-        final_result: StudentSearchResultsAndAnswer
-):
+    final_result: StudentSearchResultsAndAnswer,
+) -> None:
     """
     Save StudentSearchResultsAndAnswer to a JSON file in the output directory.
     The filename includes the current date and time for uniqueness.

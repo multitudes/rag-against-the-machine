@@ -1,10 +1,14 @@
 import os
 import logging
-from typing import List
+from typing import Any, List, Optional, Tuple, Union
 from chonkie import CodeChunker
 from chonkie import RecursiveChunker
+from chonkie import (
+    TextChef,
+    MarkdownChef,
+    SentenceChunker
+)
 from core.schemas import MinimalSource, ChunkSource
-from chonkie import TextChef, MarkdownChef, SentenceChunker
 
 
 logger = logging.getLogger(__name__)
@@ -32,9 +36,19 @@ TEXT_EXTENSIONS = [
 MARKDOWN_EXTENSIONS = ["md", "html", "rst"]
 
 
-def get_docs_for_file(file_path):
+def get_docs_for_file(
+    file_path: str,
+) -> Tuple[Optional[Any], str]:
+    """Load a file via chonkie's TextChef or MarkdownChef.
+
+    Args:
+        file_path: Path to the file to load.
+
+    Returns:
+        Tuple of (document object or None, file extension string).
+    """
     ext = file_path.lower().rsplit('.', 1)[-1]
-    chef = TextChef()
+    chef: Union[TextChef, MarkdownChef] = TextChef()
     if ext == 'md':
         chef = MarkdownChef()
     try:
@@ -87,6 +101,7 @@ def chunk_content(
             return []
 
         # Select the appropriate chunker based on file type
+        chunker: Union[CodeChunker, RecursiveChunker, SentenceChunker]
         if ext in CODE_LANGUAGES:
             language = CODE_LANGUAGES[ext]
             logger.debug(f"Using CodeChunker for {language} in {file_path}")
@@ -97,8 +112,13 @@ def chunk_content(
                 include_nodes=False
             )
         elif ext in MARKDOWN_EXTENSIONS:
-            logger.debug(f"Using RecursiveChunker for markdown in {file_path}")
-            chunker = RecursiveChunker.from_recipe("markdown", lang="en")
+            logger.debug(
+                f"Using RecursiveChunker for markdown in {file_path}")
+            chunker = RecursiveChunker(
+                tokenizer_or_token_counter="character",
+                chunk_size=chunk_size,
+                min_characters_per_chunk=1,
+            )
         elif ext in TEXT_EXTENSIONS or ext == 'dockerfile':
             logger.debug(f"Using SentenceChunker for text in {file_path}")
             chunker = SentenceChunker(

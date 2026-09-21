@@ -16,10 +16,8 @@ def read_file(file_path: str) -> str:
         return ""
 
 
-def extract_files_from_questions(questions_file: str):
-    """
-    Get all relevant files from the repository
-    """
+def extract_files_from_questions(questions_file: str) -> list[str]:
+    """Get the list of file paths referenced in a TSV questions file."""
     file_paths = set()
     try:
         with open(questions_file, 'r', encoding='utf-8') as f:

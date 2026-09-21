@@ -1,22 +1,39 @@
 [project]
 name = "rage-against-the-machine"
 version = "0.1.0"
-description = "Add your description here"
+description = "RAG system that answers questions about the vLLM codebase"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "dspy",
     "fire",
     "tqdm",
-    "langchain",
-    "chromadb",
+    "pydantic",
+    "requests",
     "chonkie[all]",
     "bm25s",
     "PyStemmer",
 ]
 
-[project.scripts]
-rage = "rage_against_the_machine.main:main"
-
 [tool.uv]
 package = true
+
+[tool.mypy]
+# Flags required by the subject (section V.2)
+warn_return_any = true
+warn_unused_ignores = true
+ignore_missing_imports = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+
+# Mirror the same exclusions as .flake8
+exclude = [
+    "data/",
+    "docs/",
+    "scripts/",
+    "\\.venv/",
+    "build/",
+    "dist/",
+]
+
+[dependency-groups]
+dev = ["mypy", "flake8", "pytest"]
