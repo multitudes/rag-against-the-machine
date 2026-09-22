@@ -1,7 +1,8 @@
 """
 Utility functions for the Rage Against the Machine RAG system.
-Includes functions for saving search results, calculating overlap,
-and output file management.
+
+Includes helpers for saving search results, calculating overlap,
+and managing output files.
 """
 
 import logging
@@ -19,12 +20,16 @@ def write_search_to_file(
     output_dir: str,
 ) -> None:
     """
-    Save StudentSearchResults to a JSON file in the specified output directory.
+    Save StudentSearchResults to a JSON file in the output directory.
+
     The filename includes the current date and time for uniqueness.
 
     Args:
-        result (StudentSearchResults): The search results to save.
-        output_dir (str): Directory to save the output file.
+        result: The search results to save.
+        output_dir: Directory to save the output file.
+
+    Returns:
+        None.
 
     """
     os.makedirs(output_dir, exist_ok=True)
@@ -44,17 +49,18 @@ def calculate_overlap_percentage(
 ) -> float:
     """
     Calculate the percentage overlap between two character ranges.
-    The overlap is measured relative to the length of the ground truth chunk.
-    Returns 0.0 if there is no overlap.
+
+    The overlap is measured relative to the length of the ground truth
+    chunk. Returns 0.0 if there is no overlap.
 
     Args:
-        start1 (int): Start index of ground truth chunk.
-        end1 (int): End index of ground truth chunk.
-        start2 (int): Start index of retrieved chunk.
-        end2 (int): End index of retrieved chunk.
+        start1: Start index of the ground truth chunk.
+        end1: End index of the ground truth chunk.
+        start2: Start index of the retrieved chunk.
+        end2: End index of the retrieved chunk.
 
     Returns:
-        float: Percentage overlap (0.0 if no overlap).
+        Percentage overlap (0.0 if no overlap).
 
     """
     overlap_start = max(start1, start2)
@@ -64,8 +70,6 @@ def calculate_overlap_percentage(
     if overlap_length == 0:
         return 0.0
 
-    # a common way is to measure
-    # overlap relative to the length of the ground truth chunk.
     ground_truth_length = end1 - start1
     if ground_truth_length == 0:
         return 0.0
@@ -77,14 +81,17 @@ def save_search_results_and_answer_to_json(
     final_result: StudentSearchResultsAndAnswer,
 ) -> None:
     """
-    Save StudentSearchResultsAndAnswer to a JSON file in the output directory.
+    Save StudentSearchResultsAndAnswer to a JSON file.
+
     The filename includes the current date and time for uniqueness.
 
     Args:
-        final_result (StudentSearchResultsAndAnswer): The results to save.
+        final_result: The results-and-answers object to save.
+
+    Returns:
+        None.
 
     """
-    # Build the filename based on current date
     date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     filename = f"Dataset_{date_str}_valid.json"
     output_dir = "data/output/search_results/"

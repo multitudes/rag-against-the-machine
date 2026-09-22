@@ -154,8 +154,10 @@ class Searcher:
                     )
                     content = f.read(length)
                     context_chunks.append(content)
-            except Exception as e:
-                logger.info("Error reading file %s: %s", source.file_path, e)
+            except Exception:
+                logger.exception(
+                    "Error reading file %s", source.file_path
+                )
         if not context_chunks:
             logger.error("Could not retrieve any context content.")
         return context_chunks
@@ -184,6 +186,6 @@ def retrieve_context_from_sources(
                     source.last_character_index - source.first_character_index,
                 )
                 context_chunks.append(content)
-        except Exception as e:
-            logger.info("Error reading file %s: %s", source.file_path, e)
+        except Exception:
+            logger.exception("Error reading file %s", source.file_path)
     return context_chunks

@@ -1,3 +1,7 @@
+"""
+BM25 index creation and persistence.
+"""
+
 import json
 import logging
 from pathlib import Path
@@ -18,11 +22,14 @@ def create_bm25_index(
     index_dir: str = DEFAULT_INDEX_DIR,
 ) -> None:
     """
-    Creates and saves a BM25 index from a list of text chunks.
+    Create and save a BM25 index from a list of text chunks.
 
     Args:
-        all_chunks: A list of chunk objects from chonkie.
-        index_dir: The path to save the serialized index files.
+        all_chunks: Chunk objects produced by the chunking pipeline.
+        index_dir: Directory to save the serialized index files.
+
+    Returns:
+        None.
 
     """
     if not all_chunks:

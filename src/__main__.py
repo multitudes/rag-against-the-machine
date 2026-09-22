@@ -96,7 +96,7 @@ class RagCLI:
             create_bm25_index(chunks, index_dir)
 
         except Exception:
-            logger.exception("Indexing failed: %s")
+            logger.exception("Indexing failed")
             return
 
         duration = time.time() - start_time
@@ -143,9 +143,9 @@ class RagCLI:
             result = searcher.search_one(unansweredQuestion=unanswered, k=k)
             print(json.dumps(result.model_dump(), indent=2))
         except FileNotFoundError:
-            logger.exception("Index files not found: %s")
+            logger.exception("Index files not found")
         except Exception:
-            logger.exception("Search failed: %s")
+            logger.exception("Search failed")
 
     # ------------------------------------------------------------------
     # search_dataset
@@ -204,10 +204,10 @@ class RagCLI:
                 f.write(result.model_dump_json(indent=4))
             print(f"Saved student_search_results to {output_path}")
 
-        except FileNotFoundError as e:
-            logger.error("File not found: %s", e)
-        except Exception as e:
-            logger.error("search_dataset failed: %s", e)
+        except FileNotFoundError:
+            logger.exception("File not found")
+        except Exception:
+            logger.exception("search_dataset failed")
 
     # ------------------------------------------------------------------
     # answer (single query)
@@ -253,10 +253,10 @@ class RagCLI:
                 k=k,
             )
             print(final_result.model_dump_json(indent=2))
-        except FileNotFoundError as e:
-            logger.error("Required files not found: %s", e)
-        except Exception as e:
-            logger.error("answer failed: %s", e)
+        except FileNotFoundError:
+            logger.exception("Required files not found")
+        except Exception:
+            logger.exception("answer failed")
 
     # ------------------------------------------------------------------
     # answer_dataset
@@ -293,8 +293,8 @@ class RagCLI:
                 student_results = StudentSearchResults.model_validate_json(
                     f.read()
                 )
-        except Exception as e:
-            logger.error("Failed to parse search results: %s", e)
+        except Exception:
+            logger.exception("Failed to parse search results")
             return
 
         total = len(student_results.search_results)
@@ -308,8 +308,8 @@ class RagCLI:
             ):
                 minimal_answer = answer_from_search_result(search_result)
                 minimal_answers.append(minimal_answer)
-        except Exception as e:
-            logger.error("Answer generation failed: %s", e)
+        except Exception:
+            logger.exception("Answer generation failed")
 
         final_result = StudentSearchResultsAndAnswer(
             search_results=minimal_answers,
@@ -362,8 +362,8 @@ class RagCLI:
                 search_data = StudentSearchResults.model_validate_json(f.read())
             with Path(dataset_path).open(encoding="utf-8") as f:
                 ground_truth_data = RagDataset.model_validate_json(f.read())
-        except Exception as e:
-            logger.error("Failed to load evaluation files: %s", e)
+        except Exception:
+            logger.exception("Failed to load evaluation files")
             return
 
         ground_truth_map = {}

@@ -7,18 +7,34 @@ logger = logging.getLogger(__name__)
 
 def read_file(file_path: str) -> str:
     """
-    Read content from a file handling different encodings."""
+    Read content from a file handling different encodings.
+
+    Args:
+        file_path: Path to the file to read.
+
+    Returns:
+        File content as a string, or an empty string on error.
+
+    """
     try:
         with Path(file_path).open(encoding="utf-8") as f:
             return f.read()
-    except Exception as e:
-        logger.error("Error reading file %s: %s", file_path, e)
+    except Exception:
+        logger.exception("Error reading file %s", file_path)
         return ""
 
 
 def extract_files_from_questions(questions_file: str) -> list[str]:
     """
-    Get the list of file paths referenced in a TSV questions file."""
+    Get the list of file paths referenced in a TSV questions file.
+
+    Args:
+        questions_file: Path to the TSV file containing questions.
+
+    Returns:
+        List of unique file paths extracted from the TSV.
+
+    """
     file_paths = set()
     try:
         with Path(questions_file).open(encoding="utf-8") as f:
@@ -44,12 +60,19 @@ def extract_files_from_questions(questions_file: str) -> list[str]:
 def get_all_files(repo_path: str) -> list[str]:
     """
     Get all files from the repository, skipping common temporary directories.
+
+    Args:
+        repo_path: Root directory of the repository to walk.
+
+    Returns:
+        List of absolute file paths found under repo_path.
+
     """
     files = []
     excluded_dirs = ["__pycache__", "node_modules", ".git"]
 
     for root, dirs, filenames in os.walk(repo_path):
-		# pruning the walk modifying dirs in place
+        # pruning the walk modifying dirs in place
         dirs[:] = [
             d for d in dirs
             if not d.startswith(".") and d not in excluded_dirs

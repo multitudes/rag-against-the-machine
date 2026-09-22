@@ -43,8 +43,8 @@ def calling_llm(prompt: str) -> str:
         answer_content = str(response_data["message"]["content"])
         logger.debug("Answer:\n%s", answer_content)
         return answer_content
-    except Exception as e:
-        logger.error("Could not generate answer: %s", e)
+    except Exception:
+        logger.exception("Could not generate answer")
         return answer_content
 
 
