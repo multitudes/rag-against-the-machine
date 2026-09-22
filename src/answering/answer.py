@@ -40,10 +40,10 @@ def calling_llm(prompt: str) -> str:
         response.raise_for_status()
         response_data = response.json()
         answer_content = str(response_data["message"]["content"])
-        logger.debug(f"Answer:\n{answer_content}")
+        logger.debug("Answer:\n%s", answer_content)
         return answer_content
     except Exception as e:
-        logger.error(f"Could not generate answer: {e}")
+        logger.error("Could not generate answer: %s", e)
         return answer_content
 
 
@@ -113,7 +113,7 @@ def get_answer(
         MinimalAnswer with sources and generated answer.
 
     """
-    logger.debug(f"Answering: '{unansweredQuestion.question}'")
+    logger.debug("Answering: '%s'", unansweredQuestion.question)
     searcher = Searcher(index_dir=index_dir)
     search_result = searcher.search_one(
         unansweredQuestion=unansweredQuestion,

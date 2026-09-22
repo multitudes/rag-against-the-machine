@@ -18,9 +18,7 @@ DEFAULT_INDEX_DIR = "data/processed"
 
 
 class Searcher:
-    """
-    A class to handle loading a BM25 index and perform searches.
-    """
+    """A class to handle loading a BM25 index and perform searches."""
 
     def __init__(self, index_dir: str = DEFAULT_INDEX_DIR) -> None:
         """
@@ -47,11 +45,11 @@ class Searcher:
         self.retriever = bm25s.BM25.load(index_dir, mmap=True, load_corpus=True)
         self.stemmer = Stemmer.Stemmer("english")
         self.corpus = self.retriever.corpus
-        logger.debug(f"BM25 index loaded with {len(self.corpus)} documents.")
+        logger.debug("BM25 index loaded with %d documents.", len(self.corpus))
 
         with open(metadata_path, encoding="utf-8") as f:
             self.metadata = json.load(f)
-        logger.debug(f"Loaded metadata for {len(self.metadata)} chunks.")
+        logger.debug("Loaded metadata for %d chunks.", len(self.metadata))
 
     def search_one(
         self,
@@ -69,18 +67,24 @@ class Searcher:
             MinimalSearchResults with the top-k sources.
 
         """
-        logger.debug(f"Retrieving top-{k} results for: '{unansweredQuestion.question}'")
-        query_tokens = bm25s.tokenize(unansweredQuestion.question, stemmer=self.stemmer)
+        logger.debug(
+            "Retrieving top-%d results for: '%s'",
+            k,
+            unansweredQuestion.question,
+        )
+        query_tokens = bm25s.tokenize(
+            unansweredQuestion.question, stemmer=self.stemmer
+        )
 
         results, scores = self.retriever.retrieve(query_tokens, k=k)
 
         retrieved_sources: list[MinimalSource] = []
         for i in range(results.shape[1]):
-            logger.debug(f"Score {i + 1}: {scores[0, i]}")
+            logger.debug("Score %d: %s", i + 1, scores[0, i])
             meta_idx = results[0, i]["id"]
             meta = self.metadata[meta_idx]
             meta_text = results[0, i]["text"]
-            logger.debug(f"Rank {i + 1}: {meta_text[:40]}")
+            logger.debug("Rank %d: %s", i + 1, meta_text[:40])
 
             min_src = MinimalSource(
                 file_path=meta["file_path"],
@@ -89,7 +93,7 @@ class Searcher:
             )
             retrieved_sources.append(min_src)
 
-        logger.debug(f"Retrieved {len(retrieved_sources)} sources.")
+        logger.debug("Retrieved %d sources.", len(retrieved_sources))
         return MinimalSearchResults(
             question_id=unansweredQuestion.question_id,
             question=unansweredQuestion.question,
@@ -117,7 +121,7 @@ class Searcher:
         for question in questions:
             result = self.search_one(unansweredQuestion=question, k=k)
             search_results.append(result)
-        logger.debug(f"Found results for {len(search_results)} questions.")
+        logger.debug("Found results for %d questions.", len(search_results))
         return StudentSearchResults(
             search_results=search_results,
             k=k,
@@ -142,12 +146,14 @@ class Searcher:
             try:
                 with open(source.file_path, encoding="utf-8") as f:
                     f.seek(source.first_character_index)
-                    content = f.read(
-                        source.last_character_index - source.first_character_index,
+                    length = (
+                        source.last_character_index
+                        - source.first_character_index
                     )
+                    content = f.read(length)
                     context_chunks.append(content)
             except Exception as e:
-                logger.info(f"Error reading file {source.file_path}: {e}")
+                logger.info("Error reading file %s: %s", source.file_path, e)
         if not context_chunks:
             logger.error("Could not retrieve any context content.")
         return context_chunks
@@ -177,5 +183,5 @@ def retrieve_context_from_sources(
                 )
                 context_chunks.append(content)
         except Exception as e:
-            logger.info(f"Error reading file {source.file_path}: {e}")
+            logger.info("Error reading file %s: %s", source.file_path, e)
     return context_chunks

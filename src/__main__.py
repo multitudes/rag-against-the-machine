@@ -31,8 +31,7 @@ DEFAULT_REPO_PATH = "data/raw/vllm-0.10.1"
 
 
 class RagCLI:
-    """
-    CLI for the RAG (Retrieval-Augmented Generation) system.
+    """CLI for the RAG (Retrieval-Augmented Generation) system.
 
     Every command is invoked as:
         uv run python -m src <command> [options]
@@ -48,8 +47,7 @@ class RagCLI:
         repo_path: str = DEFAULT_REPO_PATH,
         index_dir: str = DEFAULT_INDEX_DIR,
     ) -> None:
-        """
-        Ingest data/raw/ and build the BM25 index under data/processed/.
+        """Ingest data/raw/ and build the BM25 index under data/processed/.
 
         Args:
             max_chunk_size: Maximum characters per chunk (default 2000).
@@ -59,19 +57,22 @@ class RagCLI:
         """
         if max_chunk_size > MAX_CHUNK_SIZE:
             logger.error(
-                f"max_chunk_size cannot exceed {MAX_CHUNK_SIZE} "
-                "(moulinette rejects longer sources)."
+                "max_chunk_size cannot exceed %d "
+                "(moulinette rejects longer sources).",
+                MAX_CHUNK_SIZE,
             )
             return
         if max_chunk_size <= 0:
             logger.error("max_chunk_size must be a positive integer.")
             return
         if not os.path.exists(repo_path):
-            logger.error(f"Repository path does not exist: {repo_path}")
+            logger.error("Repository path does not exist: %s", repo_path)
             return
 
         logger.info(
-            f"Indexing corpus at '{repo_path}' (max_chunk_size={max_chunk_size}) …"
+            "Indexing corpus at '%s' (max_chunk_size=%d) …",
+            repo_path,
+            max_chunk_size,
         )
         start_time = time.time()
         try:
@@ -92,11 +93,14 @@ class RagCLI:
             create_bm25_index(chunks, index_dir)
 
         except Exception as e:
-            logger.error(f"Indexing failed: {e}")
+            logger.error("Indexing failed: %s", e)
             return
 
         duration = time.time() - start_time
-        print(f"Ingestion complete! Indices saved under {index_dir} ({duration:.1f}s)")
+        print(
+            f"Ingestion complete! Indices saved under "
+            f"{index_dir} ({duration:.1f}s)"
+        )
 
     # ------------------------------------------------------------------
     # search
@@ -108,8 +112,7 @@ class RagCLI:
         k: int = 5,
         index_dir: str = DEFAULT_INDEX_DIR,
     ) -> None:
-        """
-        Return the top-k sources for a single query.
+        """Return the top-k sources for a single query.
 
         Args:
             query: The search query string.
@@ -125,7 +128,8 @@ class RagCLI:
             return
         if not os.path.exists(index_dir):
             logger.error(
-                f"Index directory '{index_dir}' not found. Please run 'index' first."
+                "Index directory '%s' not found. Please run 'index' first.",
+                index_dir,
             )
             return
 
@@ -133,12 +137,11 @@ class RagCLI:
             searcher = Searcher(index_dir=index_dir)
             unanswered = UnansweredQuestion(question=query)
             result = searcher.search_one(unansweredQuestion=unanswered, k=k)
-            # Pretty-print the result to stdout
             print(json.dumps(result.model_dump(), indent=2))
         except FileNotFoundError as e:
-            logger.error(f"Index files not found: {e}")
+            logger.error("Index files not found: %s", e)
         except Exception as e:
-            logger.error(f"Search failed: {e}")
+            logger.error("Search failed: %s", e)
 
     # ------------------------------------------------------------------
     # search_dataset
@@ -151,8 +154,7 @@ class RagCLI:
         save_directory: str = "data/output/search_results",
         index_dir: str = DEFAULT_INDEX_DIR,
     ) -> None:
-        """
-        Run search over a whole dataset and write a StudentSearchResults JSON.
+        """Run search over a dataset, write a StudentSearchResults JSON.
 
         Args:
             dataset_path: Path to the UnansweredQuestions JSON dataset.
@@ -163,30 +165,28 @@ class RagCLI:
         """
         if not os.path.exists(index_dir):
             logger.error(
-                f"Index directory '{index_dir}' not found. Please run 'index' first."
+                "Index directory '%s' not found. Please run 'index' first.",
+                index_dir,
             )
             return
         if not os.path.exists(dataset_path):
-            logger.error(f"Dataset file not found: {dataset_path}")
+            logger.error("Dataset file not found: %s", dataset_path)
             return
         if k <= 0:
             logger.error("k must be a positive integer.")
             return
 
-        logger.info(f"Searching dataset '{dataset_path}' with k={k} …")
+        logger.info("Searching dataset '%s' with k=%d …", dataset_path, k)
         try:
             with open(dataset_path, encoding="utf-8") as f:
                 dataset = RagDataset.model_validate_json(f.read())
 
             questions = [
-                q for q in dataset.rag_questions if isinstance(q, UnansweredQuestion)
+                q for q in dataset.rag_questions
+                if isinstance(q, UnansweredQuestion)
             ]
 
             searcher = Searcher(index_dir=index_dir)
-            result = StudentSearchResults(
-                search_results=[],
-                k=k,
-            )
             results_list = []
             for question in tqdm(questions, desc="Searching questions"):
                 res = searcher.search_one(unansweredQuestion=question, k=k)
@@ -201,9 +201,9 @@ class RagCLI:
             print(f"Saved student_search_results to {output_path}")
 
         except FileNotFoundError as e:
-            logger.error(f"File not found: {e}")
+            logger.error("File not found: %s", e)
         except Exception as e:
-            logger.error(f"search_dataset failed: {e}")
+            logger.error("search_dataset failed: %s", e)
 
     # ------------------------------------------------------------------
     # answer (single query)
@@ -215,8 +215,7 @@ class RagCLI:
         k: int = 5,
         index_dir: str = DEFAULT_INDEX_DIR,
     ) -> None:
-        """
-        Answer a single query using the retrieved context.
+        """Answer a single query using the retrieved context.
 
         Args:
             query: The question to answer.
@@ -232,7 +231,8 @@ class RagCLI:
             return
         if not os.path.exists(index_dir):
             logger.error(
-                f"Index directory '{index_dir}' not found. Please run 'index' first."
+                "Index directory '%s' not found. Please run 'index' first.",
+                index_dir,
             )
             return
         if not self._check_ollama():
@@ -249,9 +249,9 @@ class RagCLI:
             )
             print(final_result.model_dump_json(indent=2))
         except FileNotFoundError as e:
-            logger.error(f"Required files not found: {e}")
+            logger.error("Required files not found: %s", e)
         except Exception as e:
-            logger.error(f"answer failed: {e}")
+            logger.error("answer failed: %s", e)
 
     # ------------------------------------------------------------------
     # answer_dataset
@@ -262,8 +262,7 @@ class RagCLI:
         student_search_results_path: str,
         save_directory: str = "data/output/search_results_and_answer",
     ) -> None:
-        """
-        Generate answers for a dataset from pre-computed search results.
+        """Generate answers for a dataset from pre-computed search results.
 
         Reads a StudentSearchResults JSON produced by search_dataset,
         retrieves context from source files, calls the LLM for each
@@ -276,24 +275,24 @@ class RagCLI:
         """
         if not os.path.exists(student_search_results_path):
             logger.error(
-                f"Search results file not found: {student_search_results_path}"
+                "Search results file not found: %s",
+                student_search_results_path,
             )
             return
         if not self._check_ollama():
             return
 
         try:
-            with open(
-                student_search_results_path,
-                encoding="utf-8",
-            ) as f:
-                student_results = StudentSearchResults.model_validate_json(f.read())
+            with open(student_search_results_path, encoding="utf-8") as f:
+                student_results = StudentSearchResults.model_validate_json(
+                    f.read()
+                )
         except Exception as e:
-            logger.error(f"Failed to parse search results: {e}")
+            logger.error("Failed to parse search results: %s", e)
             return
 
         total = len(student_results.search_results)
-        logger.info(f"Loaded {total} questions …")
+        logger.info("Loaded %d questions …", total)
 
         minimal_answers = []
         try:
@@ -304,7 +303,7 @@ class RagCLI:
                 minimal_answer = answer_from_search_result(search_result)
                 minimal_answers.append(minimal_answer)
         except Exception as e:
-            logger.error(f"Answer generation failed: {e}")
+            logger.error("Answer generation failed: %s", e)
 
         final_result = StudentSearchResultsAndAnswer(
             search_results=minimal_answers,
@@ -330,8 +329,7 @@ class RagCLI:
         student_search_results_path: str,
         dataset_path: str,
     ) -> None:
-        """
-        Report recall@k against a ground-truth dataset (for local testing).
+        """Report recall@k against a ground-truth dataset (for local testing).
 
         Note: the official recall@k used during the defence is computed by
         the provided moulinette, not by this command.
@@ -343,26 +341,23 @@ class RagCLI:
         """
         if not os.path.exists(student_search_results_path):
             logger.error(
-                f"Search results file not found: {student_search_results_path}"
+                "Search results file not found: %s",
+                student_search_results_path,
             )
             return
         if not os.path.exists(dataset_path):
-            logger.error(f"Ground truth file not found: {dataset_path}")
+            logger.error("Ground truth file not found: %s", dataset_path)
             return
 
         try:
-            with open(
-                student_search_results_path,
-                encoding="utf-8",
-            ) as f:
+            with open(student_search_results_path, encoding="utf-8") as f:
                 search_data = StudentSearchResults.model_validate_json(f.read())
             with open(dataset_path, encoding="utf-8") as f:
                 ground_truth_data = RagDataset.model_validate_json(f.read())
         except Exception as e:
-            logger.error(f"Failed to load evaluation files: {e}")
+            logger.error("Failed to load evaluation files: %s", e)
             return
 
-        # Build ground-truth map: question_id → list of sources
         ground_truth_map = {}
         for item in ground_truth_data.rag_questions:
             if hasattr(item, "sources"):
@@ -374,7 +369,9 @@ class RagCLI:
         for result in search_data.search_results:
             qid = result.question_id
             if qid not in ground_truth_map:
-                logger.warning(f"Question {qid} not in ground truth. Skipping.")
+                logger.warning(
+                    "Question %s not in ground truth. Skipping.", qid
+                )
                 continue
             gt_sources = ground_truth_map[qid]
             if not gt_sources:

@@ -32,7 +32,7 @@ def write_search_to_file(
     output_path = os.path.join(output_dir, output_filename)
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(result.model_dump_json(indent=4))
-    logger.debug(f"Search results saved to {output_path}")
+    logger.debug("Search results saved to %s", output_path)
 
 
 def calculate_overlap_percentage(
@@ -92,5 +92,5 @@ def save_search_results_and_answer_to_json(
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(final_result.model_dump_json(indent=4))
 
-    logger.info(f"results will be saved to: {output_path}")
+    logger.info("results will be saved to: %s", output_path)
     logger.info("Answer generation completed!")

@@ -22,7 +22,7 @@ def create_bm25_index(
 
     Args:
         all_chunks: A list of chunk objects from chonkie.
-        index_path: The path to save the serialized index file.
+        index_dir: The path to save the serialized index files.
 
     """
     if not all_chunks:
@@ -41,11 +41,10 @@ def create_bm25_index(
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=4)
     logger.info(
-        f"Metadata for {len(metadata)}\
-                chunks saved to {metadata_path}"
+        "Metadata for %d chunks saved to %s", len(metadata), metadata_path
     )
 
-    logger.info(f"Creating BM25 index from {len(corpus)} total chunks...")
+    logger.info("Creating BM25 index from %d total chunks...", len(corpus))
 
     # optional: create a stemmer
     stemmer = Stemmer.Stemmer("english")
@@ -64,9 +63,9 @@ def create_bm25_index(
     retriever.save(index_dir, corpus=corpus)
     tokenizer.save_vocab(index_dir)
     tokenizer.save_stopwords(index_dir)
-    logger.info(f"Saving BM25 index to {index_dir}...")
+    logger.info("Saving BM25 index to %s...", index_dir)
 
     # get memory usage
     mem_use = bm25s.utils.benchmark.get_max_memory_usage()
-    logger.info(f"Peak memory usage: {mem_use:.2f} GB")
+    logger.info("Peak memory usage: %.2f GB", mem_use)
     logger.info("BM25 index saved successfully.")

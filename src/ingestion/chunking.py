@@ -16,61 +16,24 @@ from core.schemas import ChunkSource, MinimalSource
 logger = logging.getLogger(__name__)
 
 IGNORE_EXTENSIONS = [
-    "pdf",
-    "zip",
-    "so",
-    "svg",
-    "png",
-    "eot",
-    "ttf",
-    "woff",
-    "woff2",
-    "pylintrc",
-    "ico",
-    "jpg",
-    "neuron",
-    "nightly_torch",
-    "ppc64le",
-    "rocm",
-    "rocm_base",
-    "s390x",
-    "tpu",
-    "xpu",
-    "typed",
+    "pdf", "zip", "so", "svg", "png", "eot", "ttf", "woff", "woff2",
+    "pylintrc", "ico", "jpg", "neuron", "nightly_torch", "ppc64le",
+    "rocm", "rocm_base", "s390x", "tpu", "xpu", "typed",
 ]
 
-# Define language mapping for CodeChunker
+# Language mapping for CodeChunker
 CODE_LANGUAGES = {
-    "py": "python",
-    "pyi": "python",
+    "py": "python", "pyi": "python",
     "sh": "bash",
-    "cu": "cpp",
-    "cuh": "cpp",
-    "cpp": "cpp",
-    "h": "cpp",
-    "hpp": "cpp",
-    "inl": "cpp",
+    "cu": "cpp", "cuh": "cpp", "cpp": "cpp",
+    "h": "cpp", "hpp": "cpp", "inl": "cpp",
     "css": "css",
-    "cmake": "cmake",
-    "cmakelists.txt": "cmake",
+    "cmake": "cmake", "cmakelists.txt": "cmake",
     "js": "javascript",
 }
 TEXT_EXTENSIONS = [
-    "txt",
-    "toml",
-    "yaml",
-    "yml",
-    "json",
-    "license",
-    "dco",
-    "manifest.in",
-    "in",
-    "j2",
-    "jinja",
-    "tpl",
-    "jsonl",
-    "patch",
-    "env",
+    "txt", "toml", "yaml", "yml", "json", "license", "dco",
+    "manifest.in", "in", "j2", "jinja", "tpl", "jsonl", "patch", "env",
 ]
 MARKDOWN_EXTENSIONS = ["md", "html", "rst"]
 
@@ -78,8 +41,7 @@ MARKDOWN_EXTENSIONS = ["md", "html", "rst"]
 def get_docs_for_file(
     file_path: str,
 ) -> tuple[Any | None, str]:
-    """
-    Load a file via chonkie's TextChef or MarkdownChef.
+    """Load a file via chonkie's TextChef or MarkdownChef.
 
     Args:
         file_path: Path to the file to load.
@@ -95,7 +57,7 @@ def get_docs_for_file(
     try:
         return chef.process(file_path), ext
     except UnicodeDecodeError:
-        logger.info(f"File {file_path} is not valid UTF-8. Skipping.")
+        logger.info("File %s is not valid UTF-8. Skipping.", file_path)
         return None, ext
 
 
@@ -103,12 +65,11 @@ def _enforce_max_size(
     chunks: list[ChunkSource],
     max_size: int,
 ) -> list[ChunkSource]:
-    """
-    Split any chunk whose text exceeds max_size into smaller pieces.
+    """Split any chunk whose text exceeds max_size into smaller pieces.
 
-    This is a hard safety net for cases where the primary chunker cannot
-    split an AST node or paragraph smaller than max_size (e.g. a very
-    long function body). Character indices are adjusted to stay consistent
+    Hard safety net for cases where the primary chunker cannot split an
+    AST node or paragraph smaller than max_size (e.g. a very long
+    function body). Character indices are adjusted to stay consistent
     with the original file so the moulinette overlap check still works.
 
     Args:
@@ -124,11 +85,10 @@ def _enforce_max_size(
         if len(chunk.text) <= max_size:
             result.append(chunk)
             continue
-        # Naive character split — preserves correct file offsets
         base = chunk.source.first_character_index
         text = chunk.text
         for i in range(0, len(text), max_size):
-            sub_text = text[i : i + max_size]
+            sub_text = text[i: i + max_size]
             result.append(
                 ChunkSource(
                     text=sub_text,
@@ -147,20 +107,19 @@ def chunk_content(
     chunk_size: int = MAX_CHUNK_SIZE,
     overlap: int = 200,
 ) -> list[ChunkSource]:
-    """
-    Chunk text content into smaller pieces using chonkie.
+    """Chunk a file into smaller pieces using chonkie.
 
     Args:
         file_path: Path to the file to chunk.
-        chunk_size: Size of each chunk.
-        overlap: Overlap between chunks.
+        chunk_size: Maximum characters per chunk.
+        overlap: Overlap between chunks (sentence chunker only).
 
     Returns:
-        List of chunk dictionaries.
+        List of ChunkSource objects with text and source location.
 
     """
-    logger.debug(f"Processing file with Chonkie: {file_path}")
-    chunks = []
+    logger.debug("Processing file with Chonkie: %s", file_path)
+    chunks: list[ChunkSource] = []
     try:
         parts = file_path.lower().rsplit(".", 1)
         if len(parts) == 2:
@@ -169,27 +128,30 @@ def chunk_content(
             if name.endswith("cmakelists"):
                 ext = "cmakelists.txt"
         else:
-            filename = os.path.basename(file_path).lower()
-            ext = filename
+            ext = os.path.basename(file_path).lower()
 
         if ext in IGNORE_EXTENSIONS:
-            logger.debug(f"Ignoring binary/config file: {file_path}")
+            logger.debug("Ignoring binary/config file: %s", file_path)
             return []
+
         doc, _ = get_docs_for_file(file_path)
         if doc is None:
-            # get_docs_for_file already logged the error
             return []
         doc_content = doc.content
 
         if not doc_content:
-            logger.debug(f"No content extracted from {file_path}. Skipping.")
+            logger.debug(
+                "No content extracted from %s. Skipping.", file_path
+            )
             return []
 
         # Select the appropriate chunker based on file type
         chunker: CodeChunker | RecursiveChunker | SentenceChunker
         if ext in CODE_LANGUAGES:
             language = CODE_LANGUAGES[ext]
-            logger.debug(f"Using CodeChunker for {language} in {file_path}")
+            logger.debug(
+                "Using CodeChunker for %s in %s", language, file_path
+            )
             chunker = CodeChunker(
                 language=language,
                 tokenizer_or_token_counter="character",
@@ -197,14 +159,18 @@ def chunk_content(
                 include_nodes=False,
             )
         elif ext in MARKDOWN_EXTENSIONS:
-            logger.debug(f"Using RecursiveChunker for markdown in {file_path}")
+            logger.debug(
+                "Using RecursiveChunker for markdown in %s", file_path
+            )
             chunker = RecursiveChunker(
                 tokenizer_or_token_counter="character",
                 chunk_size=chunk_size,
                 min_characters_per_chunk=1,
             )
         elif ext in TEXT_EXTENSIONS or ext == "dockerfile":
-            logger.debug(f"Using SentenceChunker for text in {file_path}")
+            logger.debug(
+                "Using SentenceChunker for text in %s", file_path
+            )
             chunker = SentenceChunker(
                 tokenizer_or_token_counter="character",
                 chunk_size=chunk_size,
@@ -212,30 +178,31 @@ def chunk_content(
                 min_sentences_per_chunk=1,
             )
         else:
-            logger.debug(f"No specific chunker for '{ext}'.")
+            logger.debug("No specific chunker for '%s'.", ext)
             return []
 
-        chunks = chunker.chunk(doc_content)
+        raw_chunks = chunker.chunk(doc_content)
+        logger.debug(
+            "Found %d chunks in %s.", len(raw_chunks), file_path
+        )
 
-        logger.debug(f"Found {len(chunks)} chunks in {file_path}.")
         complete_chunks = []
-        for chunk in chunks:
+        for chunk in raw_chunks:
             source_obj = MinimalSource(
                 file_path=file_path,
                 first_character_index=chunk.start_index,
                 last_character_index=chunk.end_index,
             )
             complete_chunks.append(
-                ChunkSource(text=chunk.text, source=source_obj),
+                ChunkSource(text=chunk.text, source=source_obj)
             )
 
-        # Hard safety net: split any chunk that still exceeds chunk_size.
-        # CodeChunker preserves AST nodes so a single large function may
-        # exceed the limit — the moulinette rejects the whole output if
-        # any source is longer than max_context_length (2000 chars).
+        # Hard safety net: CodeChunker preserves AST nodes so a single
+        # large function may exceed the limit. The moulinette rejects
+        # the whole output if any source > max_context_length (2000).
         return _enforce_max_size(complete_chunks, chunk_size)
 
     except Exception as e:
-        logger.error(f"Could not process file {file_path}: {e} ")
+        logger.error("Could not process file %s: %s", file_path, e)
 
     return chunks
