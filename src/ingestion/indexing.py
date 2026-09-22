@@ -1,11 +1,11 @@
-import os
 import json
+import logging
+import os
+
 import bm25s
 import Stemmer
-import logging
-from typing import List
-from core.schemas import ChunkSource
 
+from core.schemas import ChunkSource
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,8 @@ DEFAULT_INDEX_DIR = "data/processed"
 
 
 def create_bm25_index(
-    all_chunks: List[ChunkSource], index_dir: str = DEFAULT_INDEX_DIR
+    all_chunks: list[ChunkSource],
+    index_dir: str = DEFAULT_INDEX_DIR,
 ) -> None:
     """
     Creates and saves a BM25 index from a list of text chunks.
@@ -22,6 +23,7 @@ def create_bm25_index(
     Args:
         all_chunks: A list of chunk objects from chonkie.
         index_path: The path to save the serialized index file.
+
     """
     if not all_chunks:
         logger.warning("No chunks provided to create BM25 index. Skipping.")
@@ -38,8 +40,10 @@ def create_bm25_index(
     metadata_path = os.path.join(index_dir, "metadata.json")
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=4)
-    logger.info(f"Metadata for {len(metadata)}\
-                chunks saved to {metadata_path}")
+    logger.info(
+        f"Metadata for {len(metadata)}\
+                chunks saved to {metadata_path}"
+    )
 
     logger.info(f"Creating BM25 index from {len(corpus)} total chunks...")
 
@@ -48,9 +52,10 @@ def create_bm25_index(
 
     # Tokenize the corpus and only keep the ids (faster and saves memory)
     corpus_tokens = bm25s.tokenize(
-        corpus, stopwords="en",
+        corpus,
+        stopwords="en",
         stemmer=stemmer,
-        show_progress=True
+        show_progress=True,
     )
     retriever = bm25s.BM25()
     logger.info("Indexing documents with BM25...")

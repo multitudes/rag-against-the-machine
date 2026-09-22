@@ -1,23 +1,26 @@
 """Main entry point for the RAG CLI."""
-import os
+
 import json
-import time
 import logging
-import requests
+import os
+import time
+
 import fire
+import requests
 from tqdm import tqdm
-from retrieval.search import Searcher
-from answering.answer import get_answer, answer_from_search_result
+
+from answering.answer import answer_from_search_result, get_answer
 from core.config import OLLAMA_HEALTH_URL
-from ingestion.chunking import chunk_content
-from ingestion.indexing import create_bm25_index
-from ingestion.file_processing import get_all_files
 from core.schemas import (
-    UnansweredQuestion,
+    RagDataset,
     StudentSearchResults,
     StudentSearchResultsAndAnswer,
-    RagDataset,
+    UnansweredQuestion,
 )
+from ingestion.chunking import chunk_content
+from ingestion.file_processing import get_all_files
+from ingestion.indexing import create_bm25_index
+from retrieval.search import Searcher
 from utils import calculate_overlap_percentage
 
 logger = logging.getLogger(__name__)
@@ -28,7 +31,8 @@ DEFAULT_REPO_PATH = "data/raw/vllm-0.10.1"
 
 
 class RagCLI:
-    """CLI for the RAG (Retrieval-Augmented Generation) system.
+    """
+    CLI for the RAG (Retrieval-Augmented Generation) system.
 
     Every command is invoked as:
         uv run python -m src <command> [options]
@@ -44,17 +48,19 @@ class RagCLI:
         repo_path: str = DEFAULT_REPO_PATH,
         index_dir: str = DEFAULT_INDEX_DIR,
     ) -> None:
-        """Ingest data/raw/ and build the BM25 index under data/processed/.
+        """
+        Ingest data/raw/ and build the BM25 index under data/processed/.
 
         Args:
             max_chunk_size: Maximum characters per chunk (default 2000).
             repo_path: Root directory of the corpus to index.
             index_dir: Output directory for the index files.
+
         """
         if max_chunk_size > 2000:
             logger.error(
-                "max_chunk_size cannot exceed 2000 "
-                "(moulinette rejects longer sources).")
+                "max_chunk_size cannot exceed 2000 (moulinette rejects longer sources)."
+            )
             return
         if max_chunk_size <= 0:
             logger.error("max_chunk_size must be a positive integer.")
@@ -63,8 +69,9 @@ class RagCLI:
             logger.error(f"Repository path does not exist: {repo_path}")
             return
 
-        logger.info(f"Indexing corpus at '{repo_path}' "
-                    f"(max_chunk_size={max_chunk_size}) …")
+        logger.info(
+            f"Indexing corpus at '{repo_path}' (max_chunk_size={max_chunk_size}) …"
+        )
         start_time = time.time()
         try:
             files_to_process = get_all_files(repo_path)
@@ -88,8 +95,7 @@ class RagCLI:
             return
 
         duration = time.time() - start_time
-        print(f"Ingestion complete! Indices saved under {index_dir} "
-              f"({duration:.1f}s)")
+        print(f"Ingestion complete! Indices saved under {index_dir} ({duration:.1f}s)")
 
     # ------------------------------------------------------------------
     # search
@@ -101,12 +107,14 @@ class RagCLI:
         k: int = 5,
         index_dir: str = DEFAULT_INDEX_DIR,
     ) -> None:
-        """Return the top-k sources for a single query.
+        """
+        Return the top-k sources for a single query.
 
         Args:
             query: The search query string.
             k: Number of results to return (default 5).
             index_dir: Path to the BM25 index directory.
+
         """
         if not query or not query.strip():
             logger.error("Query cannot be empty.")
@@ -116,8 +124,8 @@ class RagCLI:
             return
         if not os.path.exists(index_dir):
             logger.error(
-                f"Index directory '{index_dir}' not found. "
-                "Please run 'index' first.")
+                f"Index directory '{index_dir}' not found. Please run 'index' first."
+            )
             return
 
         try:
@@ -150,11 +158,12 @@ class RagCLI:
             k: Number of results per question (default 10).
             save_directory: Directory to save the output JSON file.
             index_dir: Path to the BM25 index directory.
+
         """
         if not os.path.exists(index_dir):
             logger.error(
-                f"Index directory '{index_dir}' not found. "
-                "Please run 'index' first.")
+                f"Index directory '{index_dir}' not found. Please run 'index' first."
+            )
             return
         if not os.path.exists(dataset_path):
             logger.error(f"Dataset file not found: {dataset_path}")
@@ -165,12 +174,11 @@ class RagCLI:
 
         logger.info(f"Searching dataset '{dataset_path}' with k={k} …")
         try:
-            with open(dataset_path, 'r', encoding='utf-8') as f:
+            with open(dataset_path, encoding="utf-8") as f:
                 dataset = RagDataset.model_validate_json(f.read())
 
             questions = [
-                q for q in dataset.rag_questions
-                if isinstance(q, UnansweredQuestion)
+                q for q in dataset.rag_questions if isinstance(q, UnansweredQuestion)
             ]
 
             searcher = Searcher(index_dir=index_dir)
@@ -180,15 +188,14 @@ class RagCLI:
             )
             results_list = []
             for question in tqdm(questions, desc="Searching questions"):
-                res = searcher.search_one(
-                    unansweredQuestion=question, k=k)
+                res = searcher.search_one(unansweredQuestion=question, k=k)
                 results_list.append(res)
             result = StudentSearchResults(search_results=results_list, k=k)
 
             os.makedirs(save_directory, exist_ok=True)
             filename = os.path.basename(dataset_path)
             output_path = os.path.join(save_directory, filename)
-            with open(output_path, 'w', encoding='utf-8') as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 f.write(result.model_dump_json(indent=4))
             print(f"Saved student_search_results to {output_path}")
 
@@ -207,12 +214,14 @@ class RagCLI:
         k: int = 5,
         index_dir: str = DEFAULT_INDEX_DIR,
     ) -> None:
-        """Answer a single query using the retrieved context.
+        """
+        Answer a single query using the retrieved context.
 
         Args:
             query: The question to answer.
             k: Number of sources to retrieve (default 5).
             index_dir: Path to the BM25 index directory.
+
         """
         if not query or not query.strip():
             logger.error("Query cannot be empty.")
@@ -222,8 +231,8 @@ class RagCLI:
             return
         if not os.path.exists(index_dir):
             logger.error(
-                f"Index directory '{index_dir}' not found. "
-                "Please run 'index' first.")
+                f"Index directory '{index_dir}' not found. Please run 'index' first."
+            )
             return
         if not self._check_ollama():
             return
@@ -231,7 +240,8 @@ class RagCLI:
         try:
             unanswered = UnansweredQuestion(question=query)
             minimal_answer = get_answer(
-                unansweredQuestion=unanswered, k=k, index_dir=index_dir)
+                unansweredQuestion=unanswered, k=k, index_dir=index_dir
+            )
             final_result = StudentSearchResultsAndAnswer(
                 search_results=[minimal_answer],
                 k=k,
@@ -251,7 +261,8 @@ class RagCLI:
         student_search_results_path: str,
         save_directory: str = "data/output/search_results_and_answer",
     ) -> None:
-        """Generate answers for a dataset from pre-computed search results.
+        """
+        Generate answers for a dataset from pre-computed search results.
 
         Reads a StudentSearchResults JSON produced by search_dataset,
         retrieves context from source files, calls the LLM for each
@@ -260,21 +271,22 @@ class RagCLI:
         Args:
             student_search_results_path: Path to StudentSearchResults JSON.
             save_directory: Directory to save the output JSON file.
+
         """
         if not os.path.exists(student_search_results_path):
             logger.error(
-                f"Search results file not found: "
-                f"{student_search_results_path}")
+                f"Search results file not found: {student_search_results_path}"
+            )
             return
         if not self._check_ollama():
             return
 
         try:
             with open(
-                student_search_results_path, 'r', encoding='utf-8'
+                student_search_results_path,
+                encoding="utf-8",
             ) as f:
-                student_results = StudentSearchResults.model_validate_json(
-                    f.read())
+                student_results = StudentSearchResults.model_validate_json(f.read())
         except Exception as e:
             logger.error(f"Failed to parse search results: {e}")
             return
@@ -301,11 +313,12 @@ class RagCLI:
         os.makedirs(save_directory, exist_ok=True)
         filename = os.path.basename(student_search_results_path)
         output_path = os.path.join(save_directory, filename)
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write(final_result.model_dump_json(indent=4))
         print(
             f"Processed {len(minimal_answers)} of {total} questions\n"
-            f"Saved student_search_results_and_answer to {output_path}")
+            f"Saved student_search_results_and_answer to {output_path}"
+        )
 
     # ------------------------------------------------------------------
     # evaluate
@@ -316,7 +329,8 @@ class RagCLI:
         student_search_results_path: str,
         dataset_path: str,
     ) -> None:
-        """Report recall@k against a ground-truth dataset (for local testing).
+        """
+        Report recall@k against a ground-truth dataset (for local testing).
 
         Note: the official recall@k used during the defence is computed by
         the provided moulinette, not by this command.
@@ -324,24 +338,24 @@ class RagCLI:
         Args:
             student_search_results_path: Path to StudentSearchResults JSON.
             dataset_path: Path to the AnsweredQuestions ground-truth JSON.
+
         """
         if not os.path.exists(student_search_results_path):
             logger.error(
-                f"Search results file not found: "
-                f"{student_search_results_path}")
+                f"Search results file not found: {student_search_results_path}"
+            )
             return
         if not os.path.exists(dataset_path):
-            logger.error(
-                f"Ground truth file not found: {dataset_path}")
+            logger.error(f"Ground truth file not found: {dataset_path}")
             return
 
         try:
             with open(
-                student_search_results_path, 'r', encoding='utf-8'
+                student_search_results_path,
+                encoding="utf-8",
             ) as f:
-                search_data = StudentSearchResults.model_validate_json(
-                    f.read())
-            with open(dataset_path, 'r', encoding='utf-8') as f:
+                search_data = StudentSearchResults.model_validate_json(f.read())
+            with open(dataset_path, encoding="utf-8") as f:
                 ground_truth_data = RagDataset.model_validate_json(f.read())
         except Exception as e:
             logger.error(f"Failed to load evaluation files: {e}")
@@ -350,7 +364,7 @@ class RagCLI:
         # Build ground-truth map: question_id → list of sources
         ground_truth_map = {}
         for item in ground_truth_data.rag_questions:
-            if hasattr(item, 'sources'):
+            if hasattr(item, "sources"):
                 ground_truth_map[item.question_id] = item.sources
 
         k = search_data.k
@@ -359,8 +373,7 @@ class RagCLI:
         for result in search_data.search_results:
             qid = result.question_id
             if qid not in ground_truth_map:
-                logger.warning(
-                    f"Question {qid} not in ground truth. Skipping.")
+                logger.warning(f"Question {qid} not in ground truth. Skipping.")
                 continue
             gt_sources = ground_truth_map[qid]
             if not gt_sources:
@@ -379,17 +392,18 @@ class RagCLI:
                         if overlap >= 5.0:
                             number_found += 1
                             break
-            quest_recall_scores.append(
-                number_found / len(gt_sources))
+            quest_recall_scores.append(number_found / len(gt_sources))
 
         if not quest_recall_scores:
             logger.error("No matching questions found to evaluate.")
             return
 
         final_recall = sum(quest_recall_scores) / len(quest_recall_scores)
-        print(f"Recall@{k}: {final_recall:.3f} "
-              f"({final_recall:.1%}) over "
-              f"{len(quest_recall_scores)} questions")
+        print(
+            f"Recall@{k}: {final_recall:.3f} "
+            f"({final_recall:.1%}) over "
+            f"{len(quest_recall_scores)} questions"
+        )
 
     # ------------------------------------------------------------------
     # internal helpers
@@ -404,7 +418,8 @@ class RagCLI:
         except requests.exceptions.RequestException:
             logger.error(
                 "Ollama is not running or not accessible. "
-                "Please start Ollama before running this command.")
+                "Please start Ollama before running this command."
+            )
             return False
 
 

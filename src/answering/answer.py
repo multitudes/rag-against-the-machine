@@ -1,11 +1,13 @@
 """Answer generation module for the RAG system."""
+
 import logging
+
 import requests
-from typing import List
-from retrieval.search import Searcher, retrieve_context_from_sources
-from core.ollama_request import OllamaRequest, Message
-from core.schemas import MinimalAnswer, MinimalSearchResults, UnansweredQuestion
+
 from core.config import OLLAMA_API_URL
+from core.ollama_request import Message, OllamaRequest
+from core.schemas import MinimalAnswer, MinimalSearchResults, UnansweredQuestion
+from retrieval.search import Searcher, retrieve_context_from_sources
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +21,7 @@ def calling_llm(prompt: str) -> str:
 
     Returns:
         The model's response content, or empty string on failure.
+
     """
     answer_content = ""
     messages = [Message(role="user", content=prompt)]
@@ -36,7 +39,7 @@ def calling_llm(prompt: str) -> str:
         )
         response.raise_for_status()
         response_data = response.json()
-        answer_content = str(response_data['message']['content'])
+        answer_content = str(response_data["message"]["content"])
         logger.debug(f"Answer:\n{answer_content}")
         return answer_content
     except Exception as e:
@@ -54,6 +57,7 @@ def create_prompt(context_str: str, question: str) -> str:
 
     Returns:
         Formatted prompt string.
+
     """
     prompt = (
         "Use the following context to answer the question.\n"
@@ -78,8 +82,9 @@ def answer_from_search_result(
 
     Returns:
         MinimalAnswer with question_id, question, retrieved_sources, answer.
+
     """
-    context_chunks: List[str] = retrieve_context_from_sources(search_result)
+    context_chunks: list[str] = retrieve_context_from_sources(search_result)
     context_str = "\n\n---\n\n".join(context_chunks)
     prompt = create_prompt(context_str, search_result.question)
     answer_content = calling_llm(prompt)
@@ -106,10 +111,12 @@ def get_answer(
 
     Returns:
         MinimalAnswer with sources and generated answer.
+
     """
     logger.debug(f"Answering: '{unansweredQuestion.question}'")
     searcher = Searcher(index_dir=index_dir)
     search_result = searcher.search_one(
-        unansweredQuestion=unansweredQuestion, k=k
+        unansweredQuestion=unansweredQuestion,
+        k=k,
     )
     return answer_from_search_result(search_result)

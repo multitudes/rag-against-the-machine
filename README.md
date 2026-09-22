@@ -24,7 +24,7 @@ questions and ≥ 50 % on code questions.
 
 ## System Architecture
 
-```
+```txt
 data/raw/vllm-0.10.1/
         │
         ▼
