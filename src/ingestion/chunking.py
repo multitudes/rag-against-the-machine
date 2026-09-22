@@ -167,7 +167,7 @@ def _enforce_max_size(
                         first_character_index=base + i,
                         last_character_index=base + i + len(sub_text),
                     ),
-                )
+                ),
             )
     return result
 

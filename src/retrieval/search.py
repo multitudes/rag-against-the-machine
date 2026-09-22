@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from pathlib import Path
 
 import bm25s
 import Stemmer
@@ -48,7 +49,7 @@ class Searcher:
         self.corpus = self.retriever.corpus
         logger.debug("BM25 index loaded with %d documents.", len(self.corpus))
 
-        with open(metadata_path, encoding="utf-8") as f:
+        with Path(metadata_path).open(encoding="utf-8") as f:
             self.metadata = json.load(f)
         logger.debug("Loaded metadata for %d chunks.", len(self.metadata))
 
@@ -145,7 +146,7 @@ class Searcher:
         context_chunks = []
         for source in search_results.retrieved_sources:
             try:
-                with open(source.file_path, encoding="utf-8") as f:
+                with Path(source.file_path).open(encoding="utf-8") as f:
                     f.seek(source.first_character_index)
                     length = (
                         source.last_character_index
@@ -177,7 +178,7 @@ def retrieve_context_from_sources(
     context_chunks = []
     for source in search_result.retrieved_sources:
         try:
-            with open(source.file_path, encoding="utf-8") as f:
+            with Path(source.file_path).open(encoding="utf-8") as f:
                 f.seek(source.first_character_index)
                 content = f.read(
                     source.last_character_index - source.first_character_index,

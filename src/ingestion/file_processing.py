@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -8,7 +9,7 @@ def read_file(file_path: str) -> str:
     """
     Read content from a file handling different encodings."""
     try:
-        with open(file_path, encoding="utf-8") as f:
+        with Path(file_path).open(encoding="utf-8") as f:
             return f.read()
     except Exception as e:
         logger.error("Error reading file %s: %s", file_path, e)
@@ -20,7 +21,7 @@ def extract_files_from_questions(questions_file: str) -> list[str]:
     Get the list of file paths referenced in a TSV questions file."""
     file_paths = set()
     try:
-        with open(questions_file, encoding="utf-8") as f:
+        with Path(questions_file).open(encoding="utf-8") as f:
             header = f.readline().strip().split("\t")
             if "file_path" in header:
                 file_path_idx = header.index("file_path")

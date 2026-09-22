@@ -7,6 +7,7 @@ and output file management.
 import logging
 import os
 from datetime import datetime
+from pathlib import Path
 
 from core.schemas import StudentSearchResults, StudentSearchResultsAndAnswer
 
@@ -30,7 +31,7 @@ def write_search_to_file(
     current_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     output_filename = f"search_results_{current_date}.json"
     output_path = os.path.join(output_dir, output_filename)
-    with open(output_path, "w", encoding="utf-8") as f:
+    with Path(output_path).open("w", encoding="utf-8") as f:
         f.write(result.model_dump_json(indent=4))
     logger.debug("Search results saved to %s", output_path)
 
@@ -89,7 +90,7 @@ def save_search_results_and_answer_to_json(
     output_dir = "data/output/search_results/"
     output_path = os.path.join(output_dir, filename)
     os.makedirs(output_dir, exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
+    with Path(output_path).open("w", encoding="utf-8") as f:
         f.write(final_result.model_dump_json(indent=4))
 
     logger.info("results will be saved to: %s", output_path)

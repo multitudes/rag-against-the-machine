@@ -183,7 +183,7 @@ class RagCLI:
 
         logger.info("Searching dataset '%s' with k=%d …", dataset_path, k)
         try:
-            with open(dataset_path, encoding="utf-8") as f:
+            with Path(dataset_path).open(encoding="utf-8") as f:
                 dataset = RagDataset.model_validate_json(f.read())
 
             questions = [
@@ -200,7 +200,7 @@ class RagCLI:
 
             Path(save_directory).mkdir(parents=True, exist_ok=True)
             output_path = Path(save_directory) / Path(dataset_path).name
-            with open(output_path, "w", encoding="utf-8") as f:
+            with Path(output_path).open("w", encoding="utf-8") as f:
                 f.write(result.model_dump_json(indent=4))
             print(f"Saved student_search_results to {output_path}")
 
@@ -289,7 +289,7 @@ class RagCLI:
             return
 
         try:
-            with open(student_search_results_path, encoding="utf-8") as f:
+            with Path(student_search_results_path).open(encoding="utf-8") as f:
                 student_results = StudentSearchResults.model_validate_json(
                     f.read()
                 )
@@ -320,7 +320,7 @@ class RagCLI:
         output_path = (
             Path(save_directory) / Path(student_search_results_path).name
         )
-        with open(output_path, "w", encoding="utf-8") as f:
+        with Path(output_path).open("w", encoding="utf-8") as f:
             f.write(final_result.model_dump_json(indent=4))
         print(
             f"Processed {len(minimal_answers)} of {total} questions\n"
@@ -358,9 +358,9 @@ class RagCLI:
             return
 
         try:
-            with open(student_search_results_path, encoding="utf-8") as f:
+            with Path(student_search_results_path).open(encoding="utf-8") as f:
                 search_data = StudentSearchResults.model_validate_json(f.read())
-            with open(dataset_path, encoding="utf-8") as f:
+            with Path(dataset_path).open(encoding="utf-8") as f:
                 ground_truth_data = RagDataset.model_validate_json(f.read())
         except Exception as e:
             logger.error("Failed to load evaluation files: %s", e)

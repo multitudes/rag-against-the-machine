@@ -1,6 +1,6 @@
 import json
 import logging
-import os
+from pathlib import Path
 
 import bm25s
 import Stemmer
@@ -29,16 +29,14 @@ def create_bm25_index(
         logger.warning("No chunks provided to create BM25 index. Skipping.")
         return
     # Ensure the output directory exists
-    output_dir = os.path.dirname(index_dir)
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
+    Path(index_dir).mkdir(parents=True, exist_ok=True)
 
     # Extract the text from each chunk object
     corpus = [chunk.text for chunk in all_chunks]
     metadata = [chunk.source.model_dump() for chunk in all_chunks]
     # Save the metadata to a JSON file
-    metadata_path = os.path.join(index_dir, "metadata.json")
-    with open(metadata_path, "w", encoding="utf-8") as f:
+    metadata_path = Path(index_dir) / "metadata.json"
+    with Path(metadata_path).open("w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=4)
     logger.info(
         "Metadata for %d chunks saved to %s", len(metadata), metadata_path
