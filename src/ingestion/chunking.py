@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from chonkie import (  # type: ignore[attr-defined]
+from chonkie import (
     CodeChunker,
     MarkdownChef,
     RecursiveChunker,

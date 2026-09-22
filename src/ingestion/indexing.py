@@ -1,6 +1,4 @@
-"""
-BM25 index creation and persistence.
-"""
+"""BM25 index creation and persistence."""
 
 import json
 import logging
@@ -41,7 +39,11 @@ def create_bm25_index(
     # Extract the text from each chunk object
     corpus = [chunk.text for chunk in all_chunks]
     metadata = [chunk.source.model_dump() for chunk in all_chunks]
-    # Save the metadata to a JSON file
+
+    # --- our code writes metadata.json ---
+    # Maps each corpus position → MinimalSource (file_path + char offsets).
+    # Needed at search time to turn BM25 hits into moulinette-compatible
+    # source locations (bm25s only stores the chunk text, not the path).
     metadata_path = Path(index_dir) / "metadata.json"
     with Path(metadata_path).open("w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=4)
@@ -65,9 +67,26 @@ def create_bm25_index(
     logger.info("Indexing documents with BM25...")
     retriever.index(corpus_tokens)
     tokenizer = bm25s.tokenization.Tokenizer(stemmer=stemmer)
+
+    # --- bm25s.BM25.save() writes ---
+    #   data.csc.index.npy      BM25 scores (CSC sparse matrix data)
+    #   indices.csc.index.npy   row indices of the CSC matrix
+    #   indptr.csc.index.npy    column pointers of the CSC matrix
+    #   vocab.index.json        term → id map used by the index
+    #   params.index.json       BM25 hyperparameters (k1, b, …)
+    #   corpus.jsonl            raw chunk texts (one JSON object per line)
+    #   corpus.mmindex.json     byte offsets into corpus.jsonl for mmap
     retriever.save(index_dir, corpus=corpus)
+
+    # --- Tokenizer.save_vocab() writes vocab.tokenizer.json ---
+    # Stemmed/token vocabulary of the Tokenizer class (distinct from
+    # vocab.index.json above, which belongs to the BM25 index itself).
     tokenizer.save_vocab(index_dir)
+
+    # --- Tokenizer.save_stopwords() writes stopwords.tokenizer.json ---
+    # English stopwords list used during tokenization.
     tokenizer.save_stopwords(index_dir)
+
     logger.info("Saving BM25 index to %s...", index_dir)
 
     # get memory usage
