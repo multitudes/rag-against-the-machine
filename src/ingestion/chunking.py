@@ -10,6 +10,7 @@ from chonkie import (
     TextChef,
 )
 
+from core.config import MAX_CHUNK_SIZE
 from core.schemas import ChunkSource, MinimalSource
 
 logger = logging.getLogger(__name__)
@@ -143,7 +144,7 @@ def _enforce_max_size(
 
 def chunk_content(
     file_path: str,
-    chunk_size: int = 2048,
+    chunk_size: int = MAX_CHUNK_SIZE,
     overlap: int = 200,
 ) -> list[ChunkSource]:
     """

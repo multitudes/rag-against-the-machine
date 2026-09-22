@@ -10,7 +10,7 @@ import requests
 from tqdm import tqdm
 
 from answering.answer import answer_from_search_result, get_answer
-from core.config import OLLAMA_HEALTH_URL
+from core.config import MAX_CHUNK_SIZE, OLLAMA_HEALTH_URL
 from core.schemas import (
     RagDataset,
     StudentSearchResults,
@@ -44,7 +44,7 @@ class RagCLI:
 
     def index(
         self,
-        max_chunk_size: int = 2000,
+        max_chunk_size: int = MAX_CHUNK_SIZE,
         repo_path: str = DEFAULT_REPO_PATH,
         index_dir: str = DEFAULT_INDEX_DIR,
     ) -> None:
@@ -57,9 +57,10 @@ class RagCLI:
             index_dir: Output directory for the index files.
 
         """
-        if max_chunk_size > 2000:
+        if max_chunk_size > MAX_CHUNK_SIZE:
             logger.error(
-                "max_chunk_size cannot exceed 2000 (moulinette rejects longer sources)."
+                f"max_chunk_size cannot exceed {MAX_CHUNK_SIZE} "
+                "(moulinette rejects longer sources)."
             )
             return
         if max_chunk_size <= 0:

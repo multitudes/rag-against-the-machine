@@ -48,7 +48,7 @@ fclean: clean
 	@echo "Removing Hugging Face Hub model cache (~/.cache/huggingface/hub)..."
 	rm -rf "$(HOME)/.cache/huggingface/hub"
 
-# ── Convenience shortcuts (not part of the graded interface) ──────────────────
+# ── Convenience shortcuts ──────────────────
 
 index:
 	$(PYTHON) -m src index --max_chunk_size 2000
