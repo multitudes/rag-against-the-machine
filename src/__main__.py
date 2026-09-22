@@ -1,7 +1,5 @@
-"""
-Main entry point for the RAG CLI."""
+"""Main entry point for the RAG CLI."""
 
-import json
 import logging
 import time
 from pathlib import Path
@@ -140,8 +138,9 @@ class RagCLI:
         try:
             searcher = Searcher(index_dir=index_dir)
             unanswered = UnansweredQuestion(question=query)
-            result = searcher.search_one(unansweredQuestion=unanswered, k=k)
-            print(json.dumps(result.model_dump(), indent=2))
+            result = searcher.search_one(unanswered_question=unanswered, k=k)
+            # using pydantic model_dump_json
+            print(result.model_dump_json(indent=2))
         except FileNotFoundError:
             logger.exception("Index files not found")
         except Exception:
@@ -194,7 +193,7 @@ class RagCLI:
             searcher = Searcher(index_dir=index_dir)
             results_list = []
             for question in tqdm(questions, desc="Searching questions"):
-                res = searcher.search_one(unansweredQuestion=question, k=k)
+                res = searcher.search_one(unanswered_question=question, k=k)
                 results_list.append(res)
             result = StudentSearchResults(search_results=results_list, k=k)
 
@@ -246,7 +245,7 @@ class RagCLI:
         try:
             unanswered = UnansweredQuestion(question=query)
             minimal_answer = get_answer(
-                unansweredQuestion=unanswered, k=k, index_dir=index_dir
+                unanswered_question=unanswered, k=k, index_dir=index_dir
             )
             final_result = StudentSearchResultsAndAnswer(
                 search_results=[minimal_answer],

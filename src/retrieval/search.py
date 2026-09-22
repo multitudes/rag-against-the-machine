@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 from pathlib import Path
 
 import bm25s
@@ -18,9 +17,31 @@ logger = logging.getLogger(__name__)
 DEFAULT_INDEX_DIR = "data/processed"
 
 
-class Searcher:
+def _read_source_text(source: MinimalSource) -> str | None:
     """
-    A class to handle loading a BM25 index and perform searches."""
+    Read the text span described by a MinimalSource.
+
+    Args:
+        source: Source location (file path + character offsets).
+
+    Returns:
+        The extracted text, or None if the file could not be read.
+
+    """
+    try:
+        with Path(source.file_path).open(encoding="utf-8") as f:
+            f.seek(source.first_character_index)
+            length = (
+                source.last_character_index - source.first_character_index
+            )
+            return f.read(length)
+    except Exception:
+        logger.exception("Error reading file %s", source.file_path)
+        return None
+
+
+class Searcher:
+    """A class to handle loading a BM25 index and perform searches."""
 
     def __init__(self, index_dir: str = DEFAULT_INDEX_DIR) -> None:
         """
@@ -33,36 +54,38 @@ class Searcher:
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.WARNING)
         logger.debug("Using memory-mapped index (mmap) to reduce memory usage.")
-        if not os.path.exists(index_dir):
-            raise FileNotFoundError(
+        if not Path(index_dir).exists():
+            msg = (
                 f"Index directory '{index_dir}' not found. "
                 "Please run the 'index' command first."
             )
-        metadata_path = os.path.join(index_dir, "metadata.json")
-        if not os.path.exists(metadata_path):
-            raise FileNotFoundError(
+            raise FileNotFoundError(msg)
+        metadata_path = Path(index_dir) / "metadata.json"
+        if not metadata_path.exists():
+            msg = (
                 f"Metadata file not found at {metadata_path}. "
                 "Please run the 'index' command first."
             )
+            raise FileNotFoundError(msg)
         self.retriever = bm25s.BM25.load(index_dir, mmap=True, load_corpus=True)
         self.stemmer = Stemmer.Stemmer("english")
         self.corpus = self.retriever.corpus
         logger.debug("BM25 index loaded with %d documents.", len(self.corpus))
 
-        with Path(metadata_path).open(encoding="utf-8") as f:
+        with metadata_path.open(encoding="utf-8") as f:
             self.metadata = json.load(f)
         logger.debug("Loaded metadata for %d chunks.", len(self.metadata))
 
     def search_one(
         self,
-        unansweredQuestion: UnansweredQuestion,
+        unanswered_question: UnansweredQuestion,
         k: int = 5,
     ) -> MinimalSearchResults:
         """
         Perform a single search and return a MinimalSearchResults object.
 
         Args:
-            unansweredQuestion: The question to search for.
+            unanswered_question: The question to search for.
             k: Number of top results to return.
 
         Returns:
@@ -72,10 +95,10 @@ class Searcher:
         logger.debug(
             "Retrieving top-%d results for: '%s'",
             k,
-            unansweredQuestion.question,
+            unanswered_question.question,
         )
         query_tokens = bm25s.tokenize(
-            unansweredQuestion.question, stemmer=self.stemmer
+            unanswered_question.question, stemmer=self.stemmer
         )
 
         results, scores = self.retriever.retrieve(query_tokens, k=k)
@@ -97,8 +120,8 @@ class Searcher:
 
         logger.debug("Retrieved %d sources.", len(retrieved_sources))
         return MinimalSearchResults(
-            question_id=unansweredQuestion.question_id,
-            question=unansweredQuestion.question,
+            question_id=unanswered_question.question_id,
+            question=unanswered_question.question,
             retrieved_sources=retrieved_sources,
         )
 
@@ -121,7 +144,7 @@ class Searcher:
         logger.debug("Searching the dataset...")
         search_results = []
         for question in questions:
-            result = self.search_one(unansweredQuestion=question, k=k)
+            result = self.search_one(unanswered_question=question, k=k)
             search_results.append(result)
         logger.debug("Found results for %d questions.", len(search_results))
         return StudentSearchResults(
@@ -145,19 +168,9 @@ class Searcher:
         """
         context_chunks = []
         for source in search_results.retrieved_sources:
-            try:
-                with Path(source.file_path).open(encoding="utf-8") as f:
-                    f.seek(source.first_character_index)
-                    length = (
-                        source.last_character_index
-                        - source.first_character_index
-                    )
-                    content = f.read(length)
-                    context_chunks.append(content)
-            except Exception:
-                logger.exception(
-                    "Error reading file %s", source.file_path
-                )
+            content = _read_source_text(source)
+            if content is not None:
+                context_chunks.append(content)
         if not context_chunks:
             logger.error("Could not retrieve any context content.")
         return context_chunks
@@ -168,6 +181,7 @@ def retrieve_context_from_sources(
 ) -> list[str]:
     """
     Standalone helper to read file content for each source.
+
     Does not require a loaded BM25 index.
 
     Args:
@@ -179,13 +193,7 @@ def retrieve_context_from_sources(
     """
     context_chunks = []
     for source in search_result.retrieved_sources:
-        try:
-            with Path(source.file_path).open(encoding="utf-8") as f:
-                f.seek(source.first_character_index)
-                content = f.read(
-                    source.last_character_index - source.first_character_index,
-                )
-                context_chunks.append(content)
-        except Exception:
-            logger.exception("Error reading file %s", source.file_path)
+        content = _read_source_text(source)
+        if content is not None:
+            context_chunks.append(content)
     return context_chunks

@@ -98,7 +98,7 @@ def answer_from_search_result(
 
 
 def get_answer(
-    unansweredQuestion: UnansweredQuestion,
+    unanswered_question: UnansweredQuestion,
     k: int,
     index_dir: str = "data/processed",
 ) -> MinimalAnswer:
@@ -106,7 +106,7 @@ def get_answer(
     Full single-question pipeline: search → retrieve context → generate answer.
 
     Args:
-        unansweredQuestion: The question to answer.
+        unanswered_question: The question to answer.
         k: Number of sources to retrieve.
         index_dir: Path to the BM25 index directory.
 
@@ -114,10 +114,10 @@ def get_answer(
         MinimalAnswer with sources and generated answer.
 
     """
-    logger.debug("Answering: '%s'", unansweredQuestion.question)
+    logger.debug("Answering: '%s'", unanswered_question.question)
     searcher = Searcher(index_dir=index_dir)
     search_result = searcher.search_one(
-        unansweredQuestion=unansweredQuestion,
+        unanswered_question=unanswered_question,
         k=k,
     )
     return answer_from_search_result(search_result)
