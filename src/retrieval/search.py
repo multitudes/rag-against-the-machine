@@ -18,7 +18,8 @@ DEFAULT_INDEX_DIR = "data/processed"
 
 
 class Searcher:
-    """A class to handle loading a BM25 index and perform searches."""
+    """
+    A class to handle loading a BM25 index and perform searches."""
 
     def __init__(self, index_dir: str = DEFAULT_INDEX_DIR) -> None:
         """

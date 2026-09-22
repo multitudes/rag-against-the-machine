@@ -1,4 +1,5 @@
-"""Main entry point for the RAG CLI."""
+"""
+Main entry point for the RAG CLI."""
 
 import json
 import logging
@@ -94,14 +95,14 @@ class RagCLI:
             Path(index_dir).mkdir(parents=True, exist_ok=True)
             create_bm25_index(chunks, index_dir)
 
-        except Exception as e:
-            logger.error("Indexing failed: %s", e)
+        except Exception:
+            logger.exception("Indexing failed: %s")
             return
 
         duration = time.time() - start_time
         print(
             f"Ingestion complete! Indices saved under "
-            f"{index_dir} ({duration:.1f}s)"
+            f"{index_dir} ({duration:.1f}s)",
         )
 
     # ------------------------------------------------------------------
@@ -114,7 +115,8 @@ class RagCLI:
         k: int = 5,
         index_dir: str = DEFAULT_INDEX_DIR,
     ) -> None:
-        """Return the top-k sources for a single query.
+        """
+        Return the top-k sources for a single query.
 
         Args:
             query: The search query string.
@@ -140,10 +142,10 @@ class RagCLI:
             unanswered = UnansweredQuestion(question=query)
             result = searcher.search_one(unansweredQuestion=unanswered, k=k)
             print(json.dumps(result.model_dump(), indent=2))
-        except FileNotFoundError as e:
-            logger.error("Index files not found: %s", e)
-        except Exception as e:
-            logger.error("Search failed: %s", e)
+        except FileNotFoundError:
+            logger.exception("Index files not found: %s")
+        except Exception:
+            logger.exception("Search failed: %s")
 
     # ------------------------------------------------------------------
     # search_dataset
@@ -156,7 +158,8 @@ class RagCLI:
         save_directory: str = "data/output/search_results",
         index_dir: str = DEFAULT_INDEX_DIR,
     ) -> None:
-        """Run search over a dataset, write a StudentSearchResults JSON.
+        """
+        Run search over a dataset, write a StudentSearchResults JSON.
 
         Args:
             dataset_path: Path to the UnansweredQuestions JSON dataset.
@@ -216,7 +219,8 @@ class RagCLI:
         k: int = 5,
         index_dir: str = DEFAULT_INDEX_DIR,
     ) -> None:
-        """Answer a single query using the retrieved context.
+        """
+        Answer a single query using the retrieved context.
 
         Args:
             query: The question to answer.
@@ -263,7 +267,8 @@ class RagCLI:
         student_search_results_path: str,
         save_directory: str = "data/output/search_results_and_answer",
     ) -> None:
-        """Generate answers for a dataset from pre-computed search results.
+        """
+        Generate answers for a dataset from pre-computed search results.
 
         Reads a StudentSearchResults JSON produced by search_dataset,
         retrieves context from source files, calls the LLM for each
@@ -331,7 +336,8 @@ class RagCLI:
         student_search_results_path: str,
         dataset_path: str,
     ) -> None:
-        """Report recall@k against a ground-truth dataset (for local testing).
+        """
+        Report recall@k against a ground-truth dataset (for local testing).
 
         Note: the official recall@k used during the defence is computed by
         the provided moulinette, not by this command.
@@ -410,7 +416,8 @@ class RagCLI:
     # ------------------------------------------------------------------
 
     def _check_ollama(self) -> bool:
-        """Return True if the Ollama server is reachable, else log an error."""
+        """
+        Return True if the Ollama server is reachable, else log an error."""
         try:
             response = requests.get(OLLAMA_HEALTH_URL, timeout=2)
             response.raise_for_status()
@@ -424,7 +431,8 @@ class RagCLI:
 
 
 def main() -> None:
-    """Main entry point — initialises and runs the RagCLI via Fire."""
+    """
+    Main entry point — initialises and runs the RagCLI via Fire."""
     try:
         fire.Fire(RagCLI)
     except KeyboardInterrupt:

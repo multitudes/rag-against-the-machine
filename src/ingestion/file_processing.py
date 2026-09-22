@@ -5,7 +5,8 @@ logger = logging.getLogger(__name__)
 
 
 def read_file(file_path: str) -> str:
-    """Read content from a file handling different encodings."""
+    """
+    Read content from a file handling different encodings."""
     try:
         with open(file_path, encoding="utf-8") as f:
             return f.read()
@@ -15,7 +16,8 @@ def read_file(file_path: str) -> str:
 
 
 def extract_files_from_questions(questions_file: str) -> list[str]:
-    """Get the list of file paths referenced in a TSV questions file."""
+    """
+    Get the list of file paths referenced in a TSV questions file."""
     file_paths = set()
     try:
         with open(questions_file, encoding="utf-8") as f:

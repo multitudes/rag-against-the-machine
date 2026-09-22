@@ -1,4 +1,5 @@
-"""Answer generation module for the RAG system."""
+"""
+Answer generation module for the RAG system."""
 
 import logging
 
