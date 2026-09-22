@@ -2,8 +2,8 @@
 
 import json
 import logging
-import os
 import time
+from pathlib import Path
 
 import fire
 import requests
@@ -31,7 +31,8 @@ DEFAULT_REPO_PATH = "data/raw/vllm-0.10.1"
 
 
 class RagCLI:
-    """CLI for the RAG (Retrieval-Augmented Generation) system.
+    """
+    CLI for the RAG (Retrieval-Augmented Generation) system.
 
     Every command is invoked as:
         uv run python -m src <command> [options]
@@ -47,7 +48,8 @@ class RagCLI:
         repo_path: str = DEFAULT_REPO_PATH,
         index_dir: str = DEFAULT_INDEX_DIR,
     ) -> None:
-        """Ingest data/raw/ and build the BM25 index under data/processed/.
+        """
+        Ingest data/raw/ and build the BM25 index under data/processed/.
 
         Args:
             max_chunk_size: Maximum characters per chunk (default 2000).
@@ -65,7 +67,7 @@ class RagCLI:
         if max_chunk_size <= 0:
             logger.error("max_chunk_size must be a positive integer.")
             return
-        if not os.path.exists(repo_path):
+        if not Path(repo_path).exists():
             logger.error("Repository path does not exist: %s", repo_path)
             return
 
@@ -89,7 +91,7 @@ class RagCLI:
                 logger.warning("No chunks created from files.")
                 return
 
-            os.makedirs(index_dir, exist_ok=True)
+            Path(index_dir).mkdir(parents=True, exist_ok=True)
             create_bm25_index(chunks, index_dir)
 
         except Exception as e:
@@ -126,7 +128,7 @@ class RagCLI:
         if k <= 0:
             logger.error("k must be a positive integer.")
             return
-        if not os.path.exists(index_dir):
+        if not Path(index_dir).exists():
             logger.error(
                 "Index directory '%s' not found. Please run 'index' first.",
                 index_dir,
@@ -163,13 +165,13 @@ class RagCLI:
             index_dir: Path to the BM25 index directory.
 
         """
-        if not os.path.exists(index_dir):
+        if not Path(index_dir).exists():
             logger.error(
                 "Index directory '%s' not found. Please run 'index' first.",
                 index_dir,
             )
             return
-        if not os.path.exists(dataset_path):
+        if not Path(dataset_path).exists():
             logger.error("Dataset file not found: %s", dataset_path)
             return
         if k <= 0:
@@ -193,9 +195,8 @@ class RagCLI:
                 results_list.append(res)
             result = StudentSearchResults(search_results=results_list, k=k)
 
-            os.makedirs(save_directory, exist_ok=True)
-            filename = os.path.basename(dataset_path)
-            output_path = os.path.join(save_directory, filename)
+            Path(save_directory).mkdir(parents=True, exist_ok=True)
+            output_path = Path(save_directory) / Path(dataset_path).name
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(result.model_dump_json(indent=4))
             print(f"Saved student_search_results to {output_path}")
@@ -229,7 +230,7 @@ class RagCLI:
         if k <= 0:
             logger.error("k must be a positive integer.")
             return
-        if not os.path.exists(index_dir):
+        if not Path(index_dir).exists():
             logger.error(
                 "Index directory '%s' not found. Please run 'index' first.",
                 index_dir,
@@ -273,7 +274,7 @@ class RagCLI:
             save_directory: Directory to save the output JSON file.
 
         """
-        if not os.path.exists(student_search_results_path):
+        if not Path(student_search_results_path).exists():
             logger.error(
                 "Search results file not found: %s",
                 student_search_results_path,
@@ -310,9 +311,10 @@ class RagCLI:
             k=student_results.k,
         )
 
-        os.makedirs(save_directory, exist_ok=True)
-        filename = os.path.basename(student_search_results_path)
-        output_path = os.path.join(save_directory, filename)
+        Path(save_directory).mkdir(parents=True, exist_ok=True)
+        output_path = (
+            Path(save_directory) / Path(student_search_results_path).name
+        )
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(final_result.model_dump_json(indent=4))
         print(
@@ -339,13 +341,13 @@ class RagCLI:
             dataset_path: Path to the AnsweredQuestions ground-truth JSON.
 
         """
-        if not os.path.exists(student_search_results_path):
+        if not Path(student_search_results_path).exists():
             logger.error(
                 "Search results file not found: %s",
                 student_search_results_path,
             )
             return
-        if not os.path.exists(dataset_path):
+        if not Path(dataset_path).exists():
             logger.error("Ground truth file not found: %s", dataset_path)
             return
 

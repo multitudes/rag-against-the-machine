@@ -41,7 +41,8 @@ MARKDOWN_EXTENSIONS = ["md", "html", "rst"]
 def get_docs_for_file(
     file_path: str,
 ) -> tuple[Any | None, str]:
-    """Load a file via chonkie's TextChef or MarkdownChef.
+    """
+    Load a file via chonkie's TextChef or MarkdownChef.
 
     Args:
         file_path: Path to the file to load.
@@ -65,7 +66,8 @@ def _enforce_max_size(
     chunks: list[ChunkSource],
     max_size: int,
 ) -> list[ChunkSource]:
-    """Split any chunk whose text exceeds max_size into smaller pieces.
+    """
+    Split any chunk whose text exceeds max_size into smaller pieces.
 
     Hard safety net for cases where the primary chunker cannot split an
     AST node or paragraph smaller than max_size (e.g. a very long
@@ -107,7 +109,8 @@ def chunk_content(
     chunk_size: int = MAX_CHUNK_SIZE,
     overlap: int = 200,
 ) -> list[ChunkSource]:
-    """Chunk a file into smaller pieces using chonkie.
+    """
+    Chunk a file into smaller pieces using chonkie.
 
     Args:
         file_path: Path to the file to chunk.
@@ -141,7 +144,7 @@ def chunk_content(
 
         if not doc_content:
             logger.debug(
-                "No content extracted from %s. Skipping.", file_path
+                "No content extracted from %s. Skipping.", file_path,
             )
             return []
 
@@ -150,7 +153,7 @@ def chunk_content(
         if ext in CODE_LANGUAGES:
             language = CODE_LANGUAGES[ext]
             logger.debug(
-                "Using CodeChunker for %s in %s", language, file_path
+                "Using CodeChunker for %s in %s", language, file_path,
             )
             chunker = CodeChunker(
                 language=language,
@@ -202,7 +205,7 @@ def chunk_content(
         # the whole output if any source > max_context_length (2000).
         return _enforce_max_size(complete_chunks, chunk_size)
 
-    except Exception as e:
-        logger.error("Could not process file %s: %s", file_path, e)
+    except Exception:
+        logger.exception("Could not process file %s", file_path)
 
     return chunks

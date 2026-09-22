@@ -46,6 +46,7 @@ def get_all_files(repo_path: str) -> list[str]:
     excluded_dirs = ["__pycache__", "node_modules", ".git"]
 
     for root, dirs, filenames in os.walk(repo_path):
+		# pruning the walk modifying dirs in place
         dirs[:] = [
             d for d in dirs
             if not d.startswith(".") and d not in excluded_dirs
