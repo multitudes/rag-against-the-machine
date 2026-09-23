@@ -1,58 +1,162 @@
-# Retrieving Methods
+# TF-IDF vs BM25
 
-## What are Retrieving Methods?
+The subject requires **at least one** classic lexical retrieval method:
+**TF-IDF** or **BM25**. This project uses **BM25** (via
+[`bm25s`](https://github.com/xhluca/bm25s)).
 
-Retrieving methods are algorithms that find the most relevant document chunks/passages for a given query. They're the "R" (Retrieval) part of your RAG (Retrieval-Augmented Generation) system.
+Both methods score how well a query matches a document (in our case, a
+*chunk*) using **words**, not neural embeddings. They are fast, CPU-only,
+and easy to index offline.
 
-## Required Implementation
+---
 
-You must implement **at least one** of these basic retrieving methods:
+## Shared idea: “important words”
 
-### 1. TF-IDF (Term Frequency-Inverse Document Frequency)
-- **What it does**: Measures how important a word is to a document relative to a collection of documents
-- **How it works**: 
-  - TF: How often a term appears in a document
-  - IDF: How rare/common a term is across all documents
-  - Score = TF × IDF
-- **Good for**: Basic keyword matching
-- **Performance target**: **65% recall@5** on English questions
+Lexical search answers:
 
-### 2. BM25 (Best Matching 25)
-- **What it does**: An improved version of TF-IDF with better handling of document length and term frequency saturation
-- **How it works**: Uses a more sophisticated formula that considers:
-  - Document length normalization
-  - Term frequency saturation (diminishing returns for repeated terms)
-  - Tunable parameters (k1, b)
-- **Good for**: Better than TF-IDF, widely used in search engines
-- **Performance target**: **75% recall@5** on English questions
+> Which documents contain the query terms, and how strongly?
 
-## Performance Targets Explained
+Two building blocks appear in both formulas:
 
-### What is Recall@5?
-- **Recall@5**: Out of all the relevant documents for a question, what percentage appear in the top 5 search results?
-- **Example**: If there are 10 relevant documents for a question, and 4 of them appear in your top 5 results, then recall@5 = 4/10 = 40%
+| Idea | Meaning |
+|------|---------|
+| **Term frequency (TF)** | How often a query term appears *in this document* |
+| **Inverse document frequency (IDF)** | How rare that term is *across the whole corpus* |
 
-### Your Targets:
-- **BM25**: Must achieve ≥75% recall@5
-- **TF-IDF**: Must achieve ≥65% recall@5
+A word that appears many times in one chunk but almost nowhere else
+(e.g. `tensorizer`) is a strong signal. A word that appears everywhere
+(e.g. `the`, `function`) is weak.
 
-## Implementation with Your Libraries
+---
 
-You already have `bm25s` in your dependencies, which makes this easier:
+## TF-IDF
 
-```python
-# BM25 implementation using bm25s
-import bm25s
+**TF-IDF** = Term Frequency × Inverse Document Frequency.
 
-# For TF-IDF, you can use:
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-```
+### Intuition
 
-## Why This Matters
+- Documents that use your query terms a lot score higher (TF).
+- Rare terms count more than common ones (IDF).
 
-The retrieval quality directly impacts your final RAG system performance:
-- **Poor retrieval** → Wrong context → Bad answers
-- **Good retrieval** → Relevant context → Better answers
+A simple form of the weight for term \(t\) in document \(d\) is:
 
-The 75%/65% targets ensure your retrieval is good enough to support quality answer generation.
+\[
+\text{tf-idf}(t, d) = \text{tf}(t, d) \times \log\frac{N}{\text{df}(t)}
+\]
+
+where \(N\) is the number of documents and \(\text{df}(t)\) is how many
+documents contain \(t\).
+
+At query time you usually:
+
+1. Turn the query and every document into TF-IDF vectors.
+2. Rank documents by **cosine similarity** (or a similar vector score)
+   between the query vector and each document vector.
+
+### Strengths
+
+- Simple to understand and implement (`sklearn.TfidfVectorizer`).
+- Works well as a baseline keyword matcher.
+- No GPU required.
+
+### Weaknesses
+
+- **No saturation:** repeating a term 50 times can dominate the score
+  even if the document is not really “about” that term.
+- **Weak length handling:** long documents accumulate more term hits by
+  chance and can unfairly outrank short, focused ones.
+- Often slightly weaker than BM25 on the same corpus.
+
+---
+
+## BM25
+
+**BM25** (“Best Matching 25”) is a probabilistic ranking function from
+the Okapi family. It keeps the TF × IDF intuition but adds two important
+fixes.
+
+### What BM25 improves over TF-IDF
+
+1. **Term-frequency saturation**  
+   Extra occurrences of the same word help less and less. Matching
+   `vllm` three times is not three times better than matching it once.
+
+2. **Document-length normalisation**  
+   Scores are adjusted by how long the document is relative to the
+   average document length, so long files do not win just by being long.
+
+### Tunable parameters
+
+| Parameter | Role (typical defaults) |
+|-----------|-------------------------|
+| **k1** | Controls TF saturation (often ~1.2–2.0) |
+| **b** | Controls length normalisation (often ~0.75; `b=0` turns it off) |
+
+You usually do not need to tune these for a first working RAG index.
+
+### Strengths
+
+- Stronger default ranking than plain TF-IDF on most text corpora.
+- Still pure lexical search: fast index, fast query, no GPU.
+- Industry standard for keyword retrieval (Elasticsearch, Lucene, …).
+
+### Weaknesses
+
+- Still **lexical**: paraphrases without shared tokens
+  (`“kill a process”` vs `"terminate a job"`) may miss each other.
+- Scores are **relative** to the query, not probabilities or percentages.
+  A top score of `4.3` is only meaningful compared to the next ranks for
+  *that* query.
+
+---
+
+## Side-by-side
+
+| | TF-IDF | BM25 |
+|---|---|---|
+| Core signal | TF × IDF | TF × IDF with saturation + length norm |
+| Long documents | Can be over-favoured | Penalised / normalised |
+| Repeated terms | Linear-ish growth | Saturates (diminishing returns) |
+| Typical use | Classic IR baseline | Default lexical ranker in search engines |
+| This project | Not used | **Used** (`bm25s` + English stemmer) |
+| Subject recall hint* | Often lower bar | Often higher bar |
+
+\*Exact moulinette thresholds depend on the subject version; the idea is
+that BM25 is expected to retrieve a bit better than plain TF-IDF.
+
+---
+
+## How this project uses BM25
+
+1. **Index time** (`ingestion/indexing.py`)  
+   Chunks are tokenised (stopwords + stemming), then a BM25 sparse index
+   is saved under `data/processed/` together with `metadata.json`
+   (file path + character offsets for each chunk).
+
+2. **Query time** (`retrieval/search.py`)  
+   The question is tokenised the same way; BM25 returns the top-\(k\)
+   chunk ids; metadata turns those ids into `MinimalSource` locations
+   for the moulinette / LLM context.
+
+Embeddings (semantic search) would be a *bonus* layer on top of this,
+not a replacement for the required lexical method.
+
+---
+
+## When would you pick TF-IDF instead?
+
+- Teaching / coursework where the simpler formula is enough.
+- Tiny prototypes with `sklearn` already in the stack.
+- Experiments comparing “baseline TF-IDF” vs “BM25” on the same chunks.
+
+For this RAG defence corpus (code + docs, keyword-heavy questions),
+**BM25 is the better default**.
+
+---
+
+## Further reading
+
+- [BM25S paper](https://arxiv.org/abs/2407.03618) — fast BM25 in Python
+- [bm25s on GitHub](https://github.com/xhluca/bm25s)
+- Project notes: [bm25.md](bm25.md) (score interpretation),
+  [recall.md](recall.md) (how recall@k is measured)
