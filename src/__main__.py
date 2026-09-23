@@ -139,8 +139,12 @@ class RagCLI:
             searcher = Searcher(index_dir=index_dir)
             unanswered = UnansweredQuestion(question=query)
             result = searcher.search_one(unanswered_question=unanswered, k=k)
-            # using pydantic model_dump_json
-            print(result.model_dump_json(indent=2))
+            for source in result.retrieved_sources:
+                print(
+                    f"{source.file_path} "
+                    f"[{source.first_character_index}:"
+                    f"{source.last_character_index}]"
+                )
         except FileNotFoundError:
             logger.exception("Index files not found")
         except Exception:

@@ -52,7 +52,7 @@ class Searcher:
 
         """
         root_logger = logging.getLogger()
-        root_logger.setLevel(logging.WARNING)
+        root_logger.setLevel(logging.DEBUG)
         logger.debug("Using memory-mapped index (mmap) to reduce memory usage.")
         if not Path(index_dir).exists():
             msg = (
@@ -67,6 +67,7 @@ class Searcher:
                 "Please run the 'index' command first."
             )
             raise FileNotFoundError(msg)
+
         self.retriever = bm25s.BM25.load(index_dir, mmap=True, load_corpus=True)
         self.stemmer = Stemmer.Stemmer("english")
         self.corpus = self.retriever.corpus
@@ -101,20 +102,25 @@ class Searcher:
             unanswered_question.question, stemmer=self.stemmer
         )
 
+        # results is a 2D NumPy array with shape(n_queries, k)
+        # scores also same with scores.shape == (n_queries, k)
         results, scores = self.retriever.retrieve(query_tokens, k=k)
 
         retrieved_sources: list[MinimalSource] = []
+
         for i in range(results.shape[1]):
             logger.debug("Score %d: %s", i + 1, scores[0, i])
-            meta_idx = results[0, i]["id"]
-            meta = self.metadata[meta_idx]
-            meta_text = results[0, i]["text"]
-            logger.debug("Rank %d: %s", i + 1, meta_text[:40])
+            # BM25 returns the ID of the chunk and with ID i get the text
+            # looking into the metadata loaded at the time of chunking
+            chunk_id = results[0, i]["id"]
+            chunk = self.metadata[chunk_id]
+            chunk_text = results[0, i]["text"]
+            logger.debug("Rank %d: %s", i + 1, chunk_text[:40])
 
             min_src = MinimalSource(
-                file_path=meta["file_path"],
-                first_character_index=meta["first_character_index"],
-                last_character_index=meta["last_character_index"],
+                file_path=chunk["file_path"],
+                first_character_index=chunk["first_character_index"],
+                last_character_index=chunk["last_character_index"],
             )
             retrieved_sources.append(min_src)
 
