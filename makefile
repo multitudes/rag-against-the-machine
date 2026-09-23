@@ -34,6 +34,9 @@ lint-strict:
 	$(FLAKE8) .
 	$(MYPY) . --strict
 
+test:
+	$(PYTEST) tests -v
+
 clean:
 	@echo "Removing .venv"
 	@rm -rf .venv
@@ -73,5 +76,5 @@ answer:
 help:
 	$(PYTHON) -m src --help
 
-.PHONY: install run debug lint lint-strict clean fclean \
+.PHONY: install run debug lint lint-strict test clean fclean \
         index search search_dataset evaluate answer help

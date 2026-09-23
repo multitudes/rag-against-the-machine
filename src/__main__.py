@@ -416,22 +416,26 @@ class RagCLI:
 
     def _check_ollama(self) -> bool:
         """
-        Return True if the Ollama server is reachable, else log an error."""
+        Return True if the Ollama server is reachable, else log an error.
+
+        Returns:
+            True when Ollama responds successfully, False otherwise.
+
+        """
         try:
             response = requests.get(OLLAMA_HEALTH_URL, timeout=2)
             response.raise_for_status()
-            return True
         except requests.exceptions.RequestException:
-            logger.error(
+            logger.exception(
                 "Ollama is not running or not accessible. "
-                "Please start Ollama before running this command."
+                "Please start Ollama before running this command.",
             )
             return False
+        return True
 
 
 def main() -> None:
-    """
-    Main entry point — initialises and runs the RagCLI via Fire."""
+    """Main entry point — initialises and runs the RagCLI via Fire."""
     try:
         fire.Fire(RagCLI)
     except KeyboardInterrupt:
