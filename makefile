@@ -51,8 +51,6 @@ clean:
 	@rm -rf data/processed
 
 fclean: clean
-	@echo "Removing Hugging Face Hub model cache (~/.cache/huggingface/hub)..."
-	rm -rf "$(HOME)/.cache/huggingface/hub"
 
 # ── Convenience shortcuts ──────────────────
 
