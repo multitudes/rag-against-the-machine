@@ -73,8 +73,16 @@ evaluate:
 		--student_search_results_path data/output/search_results/UnansweredQuestions/dataset_docs_public.json \
 		--dataset_path data/datasets/AnsweredQuestions/dataset_docs_public.json
 
+answer:
+	$(PYTHON) -m src answer "How to configure OpenAI server?" --k 10
+
+answer_dataset:
+	$(PYTHON) -m src answer_dataset \
+		--student_search_results_path data/output/search_results/UnansweredQuestions/dataset_docs_public.json \
+		--save_directory data/output/search_results_and_answer/UnansweredQuestions
+
 help:
 	$(PYTHON) -m src --help
 
 .PHONY: install run debug lint lint-strict test clean fclean \
-        index search search_dataset evaluate answer help
+        index search search_dataset evaluate answer answer_dataset help
