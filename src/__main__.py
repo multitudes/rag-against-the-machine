@@ -20,6 +20,7 @@ from ingestion.chunking import chunk_content
 from ingestion.file_processing import get_all_files
 from ingestion.indexing import create_bm25_index
 from retrieval.search import Searcher
+from retrieval.semantic import create_semantic_index
 from utils import calculate_overlap_percentage
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,7 @@ class RagCLI:
         max_chunk_size: int = MAX_CHUNK_SIZE,
         repo_path: str = DEFAULT_REPO_PATH,
         index_dir: str = DEFAULT_INDEX_DIR,
+        semantic: bool = False,
     ) -> None:
         """
         Ingest data/raw/ and build the BM25 index under data/processed/.
@@ -54,6 +56,7 @@ class RagCLI:
             max_chunk_size: Maximum characters per chunk (default 2000).
             repo_path: Root directory of the corpus to index.
             index_dir: Output directory for the index files.
+            semantic: If True, also build a MiniLM vector index.
 
         """
         if max_chunk_size > MAX_CHUNK_SIZE:
@@ -92,6 +95,11 @@ class RagCLI:
 
             Path(index_dir).mkdir(parents=True, exist_ok=True)
             create_bm25_index(chunks, index_dir)
+            if semantic:
+                create_semantic_index(
+                    [chunk.text for chunk in chunks],
+                    index_dir,
+                )
 
         except Exception:
             logger.exception("Indexing failed")
@@ -112,6 +120,7 @@ class RagCLI:
         query: str,
         k: int = 5,
         index_dir: str = DEFAULT_INDEX_DIR,
+        semantic: bool = False,
     ) -> None:
         """
         Return the top-k sources for a single query.
@@ -120,6 +129,7 @@ class RagCLI:
             query: The search query string.
             k: Number of results to return (default 5).
             index_dir: Path to the BM25 index directory.
+            semantic: If True, rank with MiniLM instead of BM25.
 
         """
         if not query or not query.strip():
@@ -138,7 +148,11 @@ class RagCLI:
         try:
             searcher = Searcher(index_dir=index_dir)
             unanswered = UnansweredQuestion(question=query)
-            result = searcher.search_one(unanswered_question=unanswered, k=k)
+            result = searcher.search_one(
+                unanswered_question=unanswered,
+                k=k,
+                semantic=semantic,
+            )
             for source in result.retrieved_sources:
                 print(
                     f"{source.file_path} "

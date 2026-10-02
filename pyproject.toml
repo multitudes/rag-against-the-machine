@@ -12,6 +12,7 @@ dependencies = [
     "chonkie[all]",
     "bm25s",
     "PyStemmer",
+    "sentence-transformers",
 ]
 
 [tool.uv]

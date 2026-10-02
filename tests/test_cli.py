@@ -10,12 +10,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 from core.schemas import (
     AnsweredQuestion,
+    ChunkSource,
     MinimalSearchResults,
     MinimalSource,
     RagDataset,
     StudentSearchResults,
     UnansweredQuestion,
 )
+from ingestion.indexing import create_bm25_index
 
 
 def _load_cli() -> Any:
@@ -181,6 +183,43 @@ def test_answer_dataset_missing_results(
     """answer_dataset returns early without calling Ollama."""
     cli.answer_dataset(str(tmp_path / "missing.json"))
     assert "not found" in caplog.text
+
+
+def test_search_semantic_without_vectors(
+    cli: Any,
+    tmp_path: Path,
+    caplog: Any,
+) -> None:
+    """CLI --semantic with no embeddings.npy does not crash."""
+    index_dir = tmp_path / "idx"
+    create_bm25_index(
+        [
+            ChunkSource(
+                text="hello world test chunk about cats",
+                source=MinimalSource(
+                    file_path="a.py",
+                    first_character_index=0,
+                    last_character_index=34,
+                ),
+            ),
+            ChunkSource(
+                text="another document about dogs barking",
+                source=MinimalSource(
+                    file_path="b.py",
+                    first_character_index=0,
+                    last_character_index=35,
+                ),
+            ),
+        ],
+        str(index_dir),
+    )
+    cli.search(
+        query="hello",
+        k=1,
+        index_dir=str(index_dir),
+        semantic=True,
+    )
+    assert "Semantic index not found" in caplog.text
 
 
 def test_unanswered_question_used_in_cli() -> None:

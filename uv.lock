@@ -3773,6 +3773,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pystemmer" },
     { name = "requests" },
+    { name = "sentence-transformers" },
     { name = "tqdm" },
 ]
 
@@ -3791,6 +3792,7 @@ requires-dist = [
     { name = "pydantic" },
     { name = "pystemmer" },
     { name = "requests" },
+    { name = "sentence-transformers" },
     { name = "tqdm" },
 ]
 

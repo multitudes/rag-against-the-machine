@@ -68,6 +68,7 @@ class Searcher:
             )
             raise FileNotFoundError(msg)
 
+        self.index_dir = index_dir
         self.retriever = bm25s.BM25.load(index_dir, mmap=True, load_corpus=True)
         self.stemmer = Stemmer.Stemmer("english")
         self.corpus = self.retriever.corpus
@@ -81,9 +82,63 @@ class Searcher:
         self,
         unanswered_question: UnansweredQuestion,
         k: int = 5,
+        semantic: bool = False,
     ) -> MinimalSearchResults:
         """
         Perform a single search and return a MinimalSearchResults object.
+
+        Args:
+            unanswered_question: The question to search for.
+            k: Number of top results to return.
+            semantic: If True, rank with MiniLM cosine instead of BM25.
+
+        Returns:
+            MinimalSearchResults with the top-k sources.
+
+        """
+        logger.debug(
+            "Retrieving top-%d results for: '%s' (semantic=%s)",
+            k,
+            unanswered_question.question,
+            semantic,
+        )
+        if semantic:
+            return self._search_one_semantic(unanswered_question, k)
+        return self._search_one_bm25(unanswered_question, k)
+
+    def _sources_from_chunk_ids(
+        self,
+        chunk_ids: list[int],
+    ) -> list[MinimalSource]:
+        """
+        Map corpus row ids to MinimalSource via metadata.json.
+
+        Args:
+            chunk_ids: Indices into self.metadata.
+
+        Returns:
+            List of MinimalSource for those rows.
+
+        """
+        retrieved_sources: list[MinimalSource] = []
+        for chunk_id in chunk_ids:
+            chunk = self.metadata[chunk_id]
+            retrieved_sources.append(
+                MinimalSource(
+                    file_path=chunk["file_path"],
+                    first_character_index=chunk["first_character_index"],
+                    last_character_index=chunk["last_character_index"],
+                )
+            )
+        return retrieved_sources
+
+    def _search_one_semantic(
+        self,
+        unanswered_question: UnansweredQuestion,
+        k: int,
+    ) -> MinimalSearchResults:
+        """
+        Rank with MiniLM embeddings stored next to the BM25 index.
 
         Args:
             unanswered_question: The question to search for.
@@ -93,11 +148,36 @@ class Searcher:
             MinimalSearchResults with the top-k sources.
 
         """
-        logger.debug(
-            "Retrieving top-%d results for: '%s'",
-            k,
+        from retrieval.semantic import search_semantic_ids
+
+        chunk_ids = search_semantic_ids(
             unanswered_question.question,
+            self.index_dir,
+            k,
         )
+        logger.debug("Semantic retrieved %d sources.", len(chunk_ids))
+        return MinimalSearchResults(
+            question_id=unanswered_question.question_id,
+            question=unanswered_question.question,
+            retrieved_sources=self._sources_from_chunk_ids(chunk_ids),
+        )
+
+    def _search_one_bm25(
+        self,
+        unanswered_question: UnansweredQuestion,
+        k: int,
+    ) -> MinimalSearchResults:
+        """
+        Rank with the BM25 index (mandatory lexical path).
+
+        Args:
+            unanswered_question: The question to search for.
+            k: Number of top results to return.
+
+        Returns:
+            MinimalSearchResults with the top-k sources.
+
+        """
         query_tokens = bm25s.tokenize(
             unanswered_question.question, stemmer=self.stemmer
         )
