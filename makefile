@@ -68,18 +68,15 @@ search_dataset:
 answer:
 	$(PYTHON) -m src answer "How to configure OpenAI server?" --k 10
 
-evaluate:
-	$(PYTHON) -m src evaluate \
-		--student_search_results_path data/output/search_results/UnansweredQuestions/dataset_docs_public.json \
-		--dataset_path data/datasets/AnsweredQuestions/dataset_docs_public.json
-
-answer:
-	$(PYTHON) -m src answer "How to configure OpenAI server?" --k 10
-
 answer_dataset:
 	$(PYTHON) -m src answer_dataset \
 		--student_search_results_path data/output/search_results/UnansweredQuestions/dataset_docs_public.json \
 		--save_directory data/output/search_results_and_answer/UnansweredQuestions
+
+evaluate:
+	$(PYTHON) -m src evaluate \
+		--student_search_results_path data/output/search_results/UnansweredQuestions/dataset_docs_public.json \
+		--dataset_path data/datasets/AnsweredQuestions/dataset_docs_public.json
 
 help:
 	$(PYTHON) -m src --help
