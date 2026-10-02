@@ -121,6 +121,7 @@ class RagCLI:
         k: int = 5,
         index_dir: str = DEFAULT_INDEX_DIR,
         semantic: bool = False,
+        hybrid: bool = False,
     ) -> None:
         """
         Return the top-k sources for a single query.
@@ -130,6 +131,7 @@ class RagCLI:
             k: Number of results to return (default 5).
             index_dir: Path to the BM25 index directory.
             semantic: If True, rank with MiniLM instead of BM25.
+            hybrid: If True, fuse BM25 and MiniLM (wins over semantic).
 
         """
         if not query or not query.strip():
@@ -152,6 +154,7 @@ class RagCLI:
                 unanswered_question=unanswered,
                 k=k,
                 semantic=semantic,
+                hybrid=hybrid,
             )
             for source in result.retrieved_sources:
                 print(

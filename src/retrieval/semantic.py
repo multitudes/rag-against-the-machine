@@ -1,8 +1,8 @@
 """
-Semantic embedding index (bonus 1).
+Semantic embedding index (bonus 1) and RRF fusion (bonus 2).
 
-Stores a MiniLM vector per chunk next to the BM25 index. Used only when
-the CLI ``--semantic`` flag is set.
+Stores a MiniLM vector per chunk next to the BM25 index. Used when the
+CLI ``--semantic`` or ``--hybrid`` flag is set.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from core.config import EMBEDDING_MODEL, EMBEDDINGS_FILENAME
+from core.config import EMBEDDING_MODEL, EMBEDDINGS_FILENAME, RRF_K
 
 logger = logging.getLogger(__name__)
 
@@ -164,3 +164,34 @@ def search_semantic_ids(
     query_vec = encode_texts([query])
     ids = top_k_indices(query_vec, matrix, k)
     return [int(i) for i in ids]
+
+
+def rrf_fuse(
+    ranked_lists: list[list[int]],
+    k: int,
+    rrf_k: int = RRF_K,
+) -> list[int]:
+    """
+    Merge ranked id lists with Reciprocal Rank Fusion.
+
+    Args:
+        ranked_lists: Each list is chunk ids best-first (BM25, MiniLM, …).
+        k: Number of fused ids to return.
+        rrf_k: Smoothing constant in 1 / (rrf_k + rank).
+
+    Returns:
+        Unique chunk ids ordered by fused score, length at most k.
+
+    """
+    scores: dict[int, float] = {}
+    for ranking in ranked_lists:
+        for rank, chunk_id in enumerate(ranking, start=1):
+            scores[chunk_id] = scores.get(chunk_id, 0.0) + 1.0 / (
+                rrf_k + rank
+            )
+    ordered = sorted(
+        scores,
+        key=lambda chunk_id: scores[chunk_id],
+        reverse=True,
+    )
+    return ordered[:k]

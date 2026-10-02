@@ -10,3 +10,7 @@ MAX_CHUNK_SIZE = 2000
 # Bonus 1 — MiniLM vector index stored next to the BM25 files.
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 EMBEDDINGS_FILENAME = "embeddings.npy"
+
+# Bonus 2 — Reciprocal Rank Fusion of BM25 + MiniLM lists.
+RRF_K = 60
+HYBRID_POOL = 20

@@ -96,6 +96,13 @@ Compare with lexical search (no flag):
 uv run python -m src search "How to stop a worker?" --k 5
 ```
 
+Hybrid (bonus 2) fuses both lists — see
+[`hybrid-retrieval.md`](hybrid-retrieval.md):
+
+```sh
+uv run python -m src search "How to stop a worker?" --k 5 --hybrid
+```
+
 If you pass `--semantic` on `search` without having indexed with
 `--semantic`, the CLI logs an error and returns no hits (no traceback):
 
@@ -134,8 +141,9 @@ uv run pytest tests/test_semantic.py -v
 | CLI | `search` (default) | `search --semantic` |
 | Graded by moulinette | **Yes** (`search_dataset`) | **No** (demo / bonus 1) |
 
-They fail on **different** questions. Bonus 2 (hybrid) would merge both
-ranked lists. Semantic search must not replace BM25 for evaluation.
+They fail on **different** questions. Bonus 2 (`search --hybrid`) merges
+both ranked lists with Reciprocal Rank Fusion. Semantic/hybrid search
+must not replace BM25 for evaluation.
 
 ---
 
@@ -158,8 +166,9 @@ Code: `src/retrieval/semantic.py` (`create_semantic_index`,
 
 1. Show BM25 on a paraphrased question (few shared keywords).
 2. Same query with `--semantic`.
-3. Point at `embeddings.npy` next to `params.index.json`.
-4. State that BM25 remains the default / moulinette path.
+3. Same query with `--hybrid` (RRF of both lists).
+4. Point at `embeddings.npy` next to `params.index.json`.
+5. State that BM25 remains the default / moulinette path.
 
 ---
 
@@ -167,4 +176,5 @@ Code: `src/retrieval/semantic.py` (`create_semantic_index`,
 
 - [sentence-transformers MiniLM](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
 - [retrieving-methods.md](retrieving-methods.md) (TF-IDF vs BM25)
+- [hybrid-retrieval.md](hybrid-retrieval.md) (bonus 2: RRF of BM25 + MiniLM)
 - Subject bonus 1: vector index *next to* the lexical index

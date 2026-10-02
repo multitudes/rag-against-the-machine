@@ -222,6 +222,44 @@ def test_search_semantic_without_vectors(
     assert "Semantic index not found" in caplog.text
 
 
+def test_cli_hybrid_without_embeddings_still_prints(
+    cli: Any,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """CLI --hybrid with no embeddings.npy still prints BM25 hits."""
+    index_dir = tmp_path / "idx"
+    create_bm25_index(
+        [
+            ChunkSource(
+                text="hello world test chunk about cats",
+                source=MinimalSource(
+                    file_path="a.py",
+                    first_character_index=0,
+                    last_character_index=34,
+                ),
+            ),
+            ChunkSource(
+                text="another document about dogs barking",
+                source=MinimalSource(
+                    file_path="b.py",
+                    first_character_index=0,
+                    last_character_index=35,
+                ),
+            ),
+        ],
+        str(index_dir),
+    )
+    cli.search(
+        query="hello cats",
+        k=1,
+        index_dir=str(index_dir),
+        hybrid=True,
+    )
+    captured = capsys.readouterr()
+    assert "a.py" in captured.out
+
+
 def test_unanswered_question_used_in_cli() -> None:
     """Sanity: UnansweredQuestion is the CLI search input type."""
     q = UnansweredQuestion(question="hello")

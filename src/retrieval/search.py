@@ -83,6 +83,7 @@ class Searcher:
         unanswered_question: UnansweredQuestion,
         k: int = 5,
         semantic: bool = False,
+        hybrid: bool = False,
     ) -> MinimalSearchResults:
         """
         Perform a single search and return a MinimalSearchResults object.
@@ -91,17 +92,22 @@ class Searcher:
             unanswered_question: The question to search for.
             k: Number of top results to return.
             semantic: If True, rank with MiniLM cosine instead of BM25.
+            hybrid: If True, fuse BM25 and MiniLM ranks (wins over semantic).
 
         Returns:
             MinimalSearchResults with the top-k sources.
 
         """
         logger.debug(
-            "Retrieving top-%d results for: '%s' (semantic=%s)",
+            "Retrieving top-%d results for: '%s' "
+            "(semantic=%s hybrid=%s)",
             k,
             unanswered_question.question,
             semantic,
+            hybrid,
         )
+        if hybrid:
+            return self._search_one_hybrid(unanswered_question, k)
         if semantic:
             return self._search_one_semantic(unanswered_question, k)
         return self._search_one_bm25(unanswered_question, k)
@@ -162,6 +168,66 @@ class Searcher:
             retrieved_sources=self._sources_from_chunk_ids(chunk_ids),
         )
 
+    def _bm25_chunk_ids(self, question: str, k: int) -> list[int]:
+        """
+        Rank chunk ids with BM25, best first.
+
+        Args:
+            question: Query text.
+            k: Number of ids to return (capped at corpus size).
+
+        Returns:
+            Chunk ids aligned with metadata.json rows.
+
+        """
+        n_docs = len(self.metadata)
+        k = min(k, n_docs)
+        if k <= 0:
+            return []
+        query_tokens = bm25s.tokenize(question, stemmer=self.stemmer)
+        results, scores = self.retriever.retrieve(query_tokens, k=k)
+        chunk_ids: list[int] = []
+        for i in range(results.shape[1]):
+            logger.debug("Score %d: %s", i + 1, scores[0, i])
+            chunk_ids.append(int(results[0, i]["id"]))
+        return chunk_ids
+
+    def _search_one_hybrid(
+        self,
+        unanswered_question: UnansweredQuestion,
+        k: int,
+    ) -> MinimalSearchResults:
+        """
+        Fuse BM25 and MiniLM ranks with Reciprocal Rank Fusion.
+
+        Args:
+            unanswered_question: The question to search for.
+            k: Number of top results to return.
+
+        Returns:
+            MinimalSearchResults with the fused top-k sources.
+
+        """
+        from core.config import HYBRID_POOL
+        from retrieval.semantic import rrf_fuse, search_semantic_ids
+
+        n_docs = len(self.metadata)
+        pool = min(max(k, HYBRID_POOL), n_docs)
+        query = unanswered_question.question
+        lexical_ids = self._bm25_chunk_ids(query, pool)
+        semantic_ids = search_semantic_ids(query, self.index_dir, pool)
+        chunk_ids = rrf_fuse([lexical_ids, semantic_ids], k=k)
+        logger.debug(
+            "Hybrid fused %d sources (pool=%d).",
+            len(chunk_ids),
+            pool,
+        )
+        return MinimalSearchResults(
+            question_id=unanswered_question.question_id,
+            question=unanswered_question.question,
+            retrieved_sources=self._sources_from_chunk_ids(chunk_ids),
+        )
+
     def _search_one_bm25(
         self,
         unanswered_question: UnansweredQuestion,
@@ -178,37 +244,12 @@ class Searcher:
             MinimalSearchResults with the top-k sources.
 
         """
-        query_tokens = bm25s.tokenize(
-            unanswered_question.question, stemmer=self.stemmer
-        )
-
-        # results is a 2D NumPy array with shape(n_queries, k)
-        # scores also same with scores.shape == (n_queries, k)
-        results, scores = self.retriever.retrieve(query_tokens, k=k)
-
-        retrieved_sources: list[MinimalSource] = []
-
-        for i in range(results.shape[1]):
-            logger.debug("Score %d: %s", i + 1, scores[0, i])
-            # BM25 returns the ID of the chunk and with ID i get the text
-            # looking into the metadata loaded at the time of chunking
-            chunk_id = results[0, i]["id"]
-            chunk = self.metadata[chunk_id]
-            chunk_text = results[0, i]["text"]
-            logger.debug("Rank %d: %s", i + 1, chunk_text[:40])
-
-            min_src = MinimalSource(
-                file_path=chunk["file_path"],
-                first_character_index=chunk["first_character_index"],
-                last_character_index=chunk["last_character_index"],
-            )
-            retrieved_sources.append(min_src)
-
-        logger.debug("Retrieved %d sources.", len(retrieved_sources))
+        chunk_ids = self._bm25_chunk_ids(unanswered_question.question, k)
+        logger.debug("Retrieved %d sources.", len(chunk_ids))
         return MinimalSearchResults(
             question_id=unanswered_question.question_id,
             question=unanswered_question.question,
-            retrieved_sources=retrieved_sources,
+            retrieved_sources=self._sources_from_chunk_ids(chunk_ids),
         )
 
     def search_dataset(
