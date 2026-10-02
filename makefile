@@ -42,8 +42,11 @@ clean:
 	@rm -rf .venv
 	@echo "Removing __pycache__"
 	@find . -type d -name '__pycache__' -not -path './.venv/*' -exec rm -rf {} +
-	@echo "Removing .mypy_cache"
-	@rm -rf .mypy_cache
+	@echo "Removing lint/test caches"
+	@rm -rf .mypy_cache .pytest_cache .ruff_cache
+	@find . -type d -name '.ruff_cache' -exec rm -rf {} +
+	@echo "Removing packaging metadata (*.egg-info)"
+	@find . -type d -name '*.egg-info' -exec rm -rf {} +
 	@echo "Removing data/processed (index)"
 	@rm -rf data/processed
 
