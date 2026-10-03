@@ -1,4 +1,6 @@
-Yes, exactly! The vLLM folder contains the **source files and documentation** that your RAG system will use as its knowledge base. 
+# vLLM
+
+The vLLM folder contains the **source files and documentation** that the RAG system will use as its knowledge base. 
 
 ## What's in the vLLM folder:
 
@@ -31,7 +33,7 @@ The vLLM repository typically contains:
 ## How your RAG system uses it:
 
 ```python
-# Your ingestion process will:
+# The ingestion process will:
 def ingest(self):
     # 1. Scan the vLLM folder (assets/vllm-0.10.1/)
     files = get_all_repository_files("assets/vllm-0.10.1/")
@@ -52,14 +54,12 @@ def ingest(self):
 
 **Question**: *"How do I start the vLLM OpenAI-compatible server?"*
 
-**Your RAG system**:
+**The RAG system**:
 1. **Searches** through all the indexed vLLM files
 2. **Finds relevant chunks** from files like:
    - `docs/getting_started.md`
    - `examples/openai_server.py` 
    - `vllm/entrypoints/openai/api_server.py`
 3. **Returns the most relevant information** to answer the question
-
-So yes, the vLLM folder is your **knowledge base** - all the files that contain the information needed to answer questions about vLLM!
 
 The goal is to build a system that can answer questions about vLLM by searching through its own source code and documentation.

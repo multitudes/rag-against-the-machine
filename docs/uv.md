@@ -1,8 +1,8 @@
 # Using `uv` with Python Projects
 
-`uv` is a fast Python package manager and virtual environment tool. In this project, you are required to use `uv` for dependency management and running your code.
+`uv` is a fast Python package manager and virtual environment tool. In this project, we are required to use `uv` for dependency management and running our code.
 
-## Setting Up Your Environment
+## Setting Up the Environment
 
 1. **Install `uv`** (if not already installed):
 ```zsh
@@ -85,6 +85,3 @@ No `requirements.txt` file is needed.
 ## References
 - [uv documentation](https://docs.astral.sh/uv/)
 - [pyproject.toml specification](https://packaging.python.org/en/latest/specifications/pyproject-toml/)
-
----
-This guide explains how to use modern `uv` for Python projects as required by the 42-LLM-test project.

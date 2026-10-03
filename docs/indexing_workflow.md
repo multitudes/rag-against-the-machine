@@ -1,7 +1,3 @@
-Perfect — I have the full picture. Here's the complete indexing walkthrough:
-
----
-
 ## Indexing — full call chain
 
 ```
