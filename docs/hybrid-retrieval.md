@@ -26,13 +26,13 @@ chunks that either method likes, and boosts chunks that **both** like.
 Each retriever produces an ordered list of chunk ids (best first).
 RRF scores a chunk as:
 
-\[
-\text{score}(d) = \sum_{r \in R} \frac{1}{k_{\text{rrf}} + \text{rank}_r(d)}
-\]
+$$
+\mathrm{score}(d) = \sum_{r \in R} \frac{1}{k_{\mathrm{rrf}} + \mathrm{rank}_r(d)}
+$$
 
-- \(R\) is the set of rankings (here: BM25 and MiniLM).
-- \(\text{rank}_r(d)\) is 1-based position in that list (missing → skip).
-- \(k_{\text{rrf}} = 60\) (standard smoothing; see `RRF_K` in
+- $R$ is the set of rankings (here: BM25 and MiniLM).
+- $\mathrm{rank}_r(d)$ is 1-based position in that list (missing → skip).
+- $k_{\mathrm{rrf}} = 60$ (standard smoothing; see `RRF_K` in
   `src/core/config.py`).
 
 A chunk ranked #1 by both lists beats a chunk ranked #1 by only one.

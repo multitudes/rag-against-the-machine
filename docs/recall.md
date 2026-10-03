@@ -18,9 +18,9 @@ match exactly — covering the right region of the right file is enough.
 
 ## Per-question score
 
-\[
-\text{recall@k} = \frac{\text{ground-truth sources found in top-}k}{\text{number of ground-truth sources}}
-\]
+$$
+\mathrm{recall@k} = \frac{\text{ground-truth sources found in top-}k}{\text{number of ground-truth sources}}
+$$
 
 Dataset recall is the average of those per-question scores. Docs must
 reach **80 % recall@5**, code **50 %**.

@@ -38,14 +38,14 @@ A word that appears many times in one chunk but almost nowhere else
 - Documents that use the query terms a lot score higher (TF).
 - Rare terms count more than common ones (IDF).
 
-A simple form of the weight for term \(t\) in document \(d\) is:
+A simple form of the weight for term $t$ in document $d$ is:
 
-\[
-\text{tf-idf}(t, d) = \text{tf}(t, d) \times \log\frac{N}{\text{df}(t)}
-\]
+$$
+\mathrm{tf\text{-}idf}(t, d) = \mathrm{tf}(t, d) \times \log\frac{N}{\mathrm{df}(t)}
+$$
 
-where \(N\) is the number of documents and \(\text{df}(t)\) is how many
-documents contain \(t\).
+where $N$ is the number of documents and $\mathrm{df}(t)$ is how many
+documents contain $t$.
 
 At query time a TF-IDF system typically:
 
@@ -134,7 +134,7 @@ that BM25 is expected to retrieve a bit better than plain TF-IDF.
    (file path + character offsets for each chunk).
 
 2. **Query time** (`retrieval/search.py`)  
-   The question is tokenised the same way; BM25 returns the top-\(k\)
+   The question is tokenised the same way; BM25 returns the top-$k$
    chunk ids; metadata turns those ids into `MinimalSource` locations
    for the moulinette / LLM context.
 
