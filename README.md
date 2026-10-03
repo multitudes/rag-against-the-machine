@@ -166,7 +166,7 @@ uv run python -m src answer_dataset \
 
 ```
 uv run python -m src index          [--max_chunk_size INT] [--repo_path PATH] [--index_dir PATH] [--semantic] [--incremental]
-uv run python -m src search         QUERY [--k INT] [--index_dir PATH] [--semantic] [--hybrid]
+uv run python -m src search         QUERY [--k INT] [--index_dir PATH] [--semantic] [--hybrid] [--cache]
 uv run python -m src search_dataset --dataset_path PATH [--k INT] [--save_directory PATH]
 uv run python -m src answer         QUERY [--k INT] [--index_dir PATH]
 uv run python -m src answer_dataset --student_search_results_path PATH [--save_directory PATH]

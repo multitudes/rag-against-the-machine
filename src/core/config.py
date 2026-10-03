@@ -17,3 +17,6 @@ HYBRID_POOL = 20
 
 # Bonus 3 — per-file fingerprints for incremental indexing.
 FILES_MANIFEST_FILENAME = "files.json"
+
+# Bonus 4 — on-disk query cache next to the BM25 files.
+QUERY_CACHE_FILENAME = "query_cache.json"

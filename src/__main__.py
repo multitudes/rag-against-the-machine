@@ -12,6 +12,7 @@ from answering.answer import answer_from_search_result, get_answer
 from core.config import MAX_CHUNK_SIZE, OLLAMA_HEALTH_URL
 from core.schemas import (
     ChunkSource,
+    MinimalSource,
     RagDataset,
     StudentSearchResults,
     StudentSearchResultsAndAnswer,
@@ -24,6 +25,12 @@ from ingestion.incremental import (
     write_file_manifest,
 )
 from ingestion.indexing import create_bm25_index
+from retrieval.cache import (
+    clear_index_caches,
+    get_cached_searcher,
+    lookup_query,
+    store_query,
+)
 from retrieval.search import Searcher
 from retrieval.semantic import (
     create_semantic_index,
@@ -37,6 +44,25 @@ logging.basicConfig(level=logging.INFO)
 
 DEFAULT_INDEX_DIR = "data/processed"
 DEFAULT_REPO_PATH = "data/raw/vllm-0.10.1"
+
+
+def _print_sources(sources: list[MinimalSource]) -> None:
+    """
+    Print source locations in the single-search CLI format.
+
+    Args:
+        sources: Retrieved MinimalSource rows.
+
+    Returns:
+        None.
+
+    """
+    for source in sources:
+        print(
+            f"{source.file_path} "
+            f"[{source.first_character_index}:"
+            f"{source.last_character_index}]"
+        )
 
 
 class RagCLI:
@@ -161,6 +187,7 @@ class RagCLI:
                 max_chunk_size,
                 index_dir,
             )
+            clear_index_caches(index_dir)
 
         except Exception:
             logger.exception("Indexing failed")
@@ -183,6 +210,7 @@ class RagCLI:
         index_dir: str = DEFAULT_INDEX_DIR,
         semantic: bool = False,
         hybrid: bool = False,
+        cache: bool = False,
     ) -> None:
         """
         Return the top-k sources for a single query.
@@ -193,6 +221,7 @@ class RagCLI:
             index_dir: Path to the BM25 index directory.
             semantic: If True, rank with MiniLM instead of BM25.
             hybrid: If True, fuse BM25 and MiniLM (wins over semantic).
+            cache: If True, reuse cached index and query results.
 
         """
         if not query or not query.strip():
@@ -209,7 +238,21 @@ class RagCLI:
             return
 
         try:
-            searcher = Searcher(index_dir=index_dir)
+            if cache:
+                cached = lookup_query(
+                    query,
+                    k,
+                    index_dir,
+                    semantic,
+                    hybrid,
+                )
+                if cached is not None:
+                    _print_sources(cached)
+                    return
+            if cache:
+                searcher = get_cached_searcher(index_dir)
+            else:
+                searcher = Searcher(index_dir=index_dir)
             unanswered = UnansweredQuestion(question=query)
             result = searcher.search_one(
                 unanswered_question=unanswered,
@@ -217,12 +260,16 @@ class RagCLI:
                 semantic=semantic,
                 hybrid=hybrid,
             )
-            for source in result.retrieved_sources:
-                print(
-                    f"{source.file_path} "
-                    f"[{source.first_character_index}:"
-                    f"{source.last_character_index}]"
+            if cache:
+                store_query(
+                    query,
+                    k,
+                    index_dir,
+                    semantic,
+                    hybrid,
+                    result.retrieved_sources,
                 )
+            _print_sources(result.retrieved_sources)
         except FileNotFoundError:
             logger.exception("Index files not found")
         except Exception:

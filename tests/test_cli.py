@@ -294,6 +294,86 @@ def test_cli_incremental_noop_prints_up_to_date(
     assert "already up to date" in captured.out
 
 
+def test_cli_cache_hit_skips_searcher(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Second search --cache reprints hits without loading BM25."""
+    module = _load_cli()
+    cli = module.RagCLI()
+    index_dir = tmp_path / "idx"
+    create_bm25_index(
+        [
+            ChunkSource(
+                text="hello world test chunk about cats",
+                source=MinimalSource(
+                    file_path="a.py",
+                    first_character_index=0,
+                    last_character_index=34,
+                ),
+            ),
+            ChunkSource(
+                text="another document about dogs barking",
+                source=MinimalSource(
+                    file_path="b.py",
+                    first_character_index=0,
+                    last_character_index=35,
+                ),
+            ),
+        ],
+        str(index_dir),
+    )
+    cli.search(
+        query="hello cats",
+        k=1,
+        index_dir=str(index_dir),
+        cache=True,
+    )
+    assert (index_dir / "query_cache.json").exists()
+    capsys.readouterr()
+    with (
+        patch.object(module, "Searcher") as ctor,
+        patch.object(module, "get_cached_searcher") as cached,
+    ):
+        cli.search(
+            query="hello cats",
+            k=1,
+            index_dir=str(index_dir),
+            cache=True,
+        )
+    ctor.assert_not_called()
+    cached.assert_not_called()
+    captured = capsys.readouterr()
+    assert "a.py" in captured.out
+
+
+def test_cli_index_clears_query_cache(
+    cli: Any,
+    tmp_path: Path,
+) -> None:
+    """A successful index deletes query_cache.json."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "keep.py").write_text(
+        "def keep():\n    return 'alpha cat sat'\n",
+        encoding="utf-8",
+    )
+    index_dir = tmp_path / "idx"
+    cli.index(
+        max_chunk_size=200,
+        repo_path=str(repo),
+        index_dir=str(index_dir),
+    )
+    cache_file = index_dir / "query_cache.json"
+    cache_file.write_text('{"entries": {}}', encoding="utf-8")
+    cli.index(
+        max_chunk_size=200,
+        repo_path=str(repo),
+        index_dir=str(index_dir),
+    )
+    assert not cache_file.exists()
+
+
 def test_unanswered_question_used_in_cli() -> None:
     """Sanity: UnansweredQuestion is the CLI search input type."""
     q = UnansweredQuestion(question="hello")
