@@ -260,6 +260,40 @@ def test_cli_hybrid_without_embeddings_still_prints(
     assert "a.py" in captured.out
 
 
+def test_cli_incremental_noop_prints_up_to_date(
+    cli: Any,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """CLI --incremental with no edits prints that the index is current."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "keep.py").write_text(
+        "def keep():\n    return 'alpha cat sat'\n",
+        encoding="utf-8",
+    )
+    (repo / "edit.py").write_text(
+        "def edit():\n    return 'beta dog bark'\n",
+        encoding="utf-8",
+    )
+    index_dir = tmp_path / "idx"
+    cli.index(
+        max_chunk_size=200,
+        repo_path=str(repo),
+        index_dir=str(index_dir),
+    )
+    assert (index_dir / "files.json").exists()
+    capsys.readouterr()
+    cli.index(
+        max_chunk_size=200,
+        repo_path=str(repo),
+        index_dir=str(index_dir),
+        incremental=True,
+    )
+    captured = capsys.readouterr()
+    assert "already up to date" in captured.out
+
+
 def test_unanswered_question_used_in_cli() -> None:
     """Sanity: UnansweredQuestion is the CLI search input type."""
     q = UnansweredQuestion(question="hello")

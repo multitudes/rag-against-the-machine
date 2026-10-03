@@ -14,3 +14,6 @@ EMBEDDINGS_FILENAME = "embeddings.npy"
 # Bonus 2 — Reciprocal Rank Fusion of BM25 + MiniLM lists.
 RRF_K = 60
 HYBRID_POOL = 20
+
+# Bonus 3 — per-file fingerprints for incremental indexing.
+FILES_MANIFEST_FILENAME = "files.json"

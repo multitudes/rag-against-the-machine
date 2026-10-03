@@ -7,7 +7,7 @@ from pathlib import Path
 import bm25s
 import Stemmer
 
-from core.schemas import ChunkSource
+from core.schemas import ChunkSource, MinimalSource
 
 logger = logging.getLogger(__name__)
 
@@ -93,3 +93,55 @@ def create_bm25_index(
     mem_use = bm25s.utils.benchmark.get_max_memory_usage()
     logger.info("Peak memory usage: %.2f GB", mem_use)
     logger.info("BM25 index saved successfully.")
+
+
+def load_chunks_from_index(index_dir: str) -> list[ChunkSource]:
+    """
+    Rebuild ChunkSource rows from metadata.json and corpus.jsonl.
+
+    Args:
+        index_dir: Directory that holds a previous BM25 index.
+
+    Returns:
+        Chunks aligned with the saved corpus order.
+
+    Raises:
+        FileNotFoundError: If metadata or corpus is missing.
+        ValueError: If the two files disagree on length.
+        KeyError: If a metadata row is missing required keys.
+
+    """
+    metadata_path = Path(index_dir) / "metadata.json"
+    corpus_path = Path(index_dir) / "corpus.jsonl"
+    with metadata_path.open(encoding="utf-8") as f:
+        metadata = json.load(f)
+    texts: list[str] = []
+    with corpus_path.open(encoding="utf-8") as f:
+        for line in f:
+            raw = line.strip()
+            if not raw:
+                continue
+            doc = json.loads(raw)
+            if isinstance(doc, dict):
+                texts.append(str(doc.get("text", "")))
+            else:
+                texts.append(str(doc))
+    if len(texts) != len(metadata):
+        msg = (
+            f"corpus.jsonl has {len(texts)} rows but "
+            f"metadata.json has {len(metadata)}"
+        )
+        raise ValueError(msg)
+    chunks: list[ChunkSource] = []
+    for text, src in zip(texts, metadata, strict=True):
+        chunks.append(
+            ChunkSource(
+                text=text,
+                source=MinimalSource(
+                    file_path=src["file_path"],
+                    first_character_index=src["first_character_index"],
+                    last_character_index=src["last_character_index"],
+                ),
+            )
+        )
+    return chunks

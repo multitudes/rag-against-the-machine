@@ -177,4 +177,5 @@ Code: `src/retrieval/semantic.py` (`create_semantic_index`,
 - [sentence-transformers MiniLM](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
 - [retrieving-methods.md](retrieving-methods.md) (TF-IDF vs BM25)
 - [hybrid-retrieval.md](hybrid-retrieval.md) (bonus 2: RRF of BM25 + MiniLM)
+- [incremental-indexing.md](incremental-indexing.md) (bonus 3: re-chunk changed files)
 - Subject bonus 1: vector index *next to* the lexical index

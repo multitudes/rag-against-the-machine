@@ -17,6 +17,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from core.config import EMBEDDING_MODEL, EMBEDDINGS_FILENAME, RRF_K
+from core.schemas import ChunkSource
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,112 @@ def create_semantic_index(
     np.save(path, matrix)
     logger.info(
         "Semantic index saved to %s (shape %s)", path, matrix.shape
+    )
+
+
+def merge_semantic_index(
+    old_chunks: list[ChunkSource],
+    new_chunks: list[ChunkSource],
+    unchanged_files: set[str],
+    index_dir: str,
+) -> None:
+    """
+    Reuse MiniLM rows for unchanged files; encode only new chunks.
+
+    Args:
+        old_chunks: Chunks from the previous index (row-aligned).
+        new_chunks: Merged chunks about to be searched.
+        unchanged_files: Paths whose old vectors can be copied.
+        index_dir: Directory containing embeddings.npy.
+
+    Returns:
+        None.
+
+    """
+    path = embeddings_path(index_dir)
+    if not path.exists():
+        create_semantic_index(
+            [chunk.text for chunk in new_chunks],
+            index_dir,
+        )
+        return
+    try:
+        old_matrix = np.load(path)
+    except OSError:
+        logger.exception("Could not load embeddings at %s", path)
+        create_semantic_index(
+            [chunk.text for chunk in new_chunks],
+            index_dir,
+        )
+        return
+    if len(old_matrix) != len(old_chunks):
+        logger.info(
+            "Embedding rows (%d) != old chunks (%d). Re-encoding.",
+            len(old_matrix),
+            len(old_chunks),
+        )
+        create_semantic_index(
+            [chunk.text for chunk in new_chunks],
+            index_dir,
+        )
+        return
+
+    old_rows_by_file: dict[str, list[int]] = {}
+    for i, chunk in enumerate(old_chunks):
+        old_rows_by_file.setdefault(
+            chunk.source.file_path,
+            [],
+        ).append(i)
+    cursor: dict[str, int] = {}
+    rows: list[NDArray[np.float32] | None] = []
+    to_encode: list[str] = []
+    encode_at: list[int] = []
+    try:
+        for chunk in new_chunks:
+            file_path = chunk.source.file_path
+            if file_path in unchanged_files:
+                idx_in_file = cursor.get(file_path, 0)
+                cursor[file_path] = idx_in_file + 1
+                old_i = old_rows_by_file[file_path][idx_in_file]
+                rows.append(old_matrix[old_i])
+            else:
+                encode_at.append(len(rows))
+                rows.append(None)
+                to_encode.append(chunk.text)
+    except (KeyError, IndexError):
+        logger.exception(
+            "Could not align embeddings with chunks. Re-encoding.",
+        )
+        create_semantic_index(
+            [chunk.text for chunk in new_chunks],
+            index_dir,
+        )
+        return
+
+    if to_encode:
+        encoded = encode_texts(to_encode)
+        for slot, vec in zip(encode_at, encoded, strict=True):
+            rows[slot] = vec
+    filled: list[NDArray[np.float32]] = []
+    for row in rows:
+        if row is None:
+            logger.error("Unfilled embedding row. Re-encoding.")
+            create_semantic_index(
+                [chunk.text for chunk in new_chunks],
+                index_dir,
+            )
+            return
+        filled.append(row)
+    if not filled:
+        logger.warning("No embedding rows to save. Skipping.")
+        return
+    matrix = np.stack(filled).astype(np.float32)
+    np.save(path, matrix)
+    logger.info(
+        "Semantic index merged at %s (shape %s, encoded %d)",
+        path,
+        matrix.shape,
+        len(to_encode),
     )
 
 
