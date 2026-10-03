@@ -151,7 +151,8 @@ uv run python -m src search_dataset \
   --k 10 \
   --save_directory data/output/search_results/UnansweredQuestions
 
-# 3. Score with the moulinette
+# 3. Score with the moulinette (our search JSON first, then ground truth)
+# see docs/moulinette.md
 ./moulinette evaluate_student_search_results \
   data/output/search_results/UnansweredQuestions/dataset_docs_public.json \
   data/datasets/AnsweredQuestions/dataset_docs_public.json \

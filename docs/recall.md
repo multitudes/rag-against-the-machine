@@ -38,4 +38,5 @@ during the defence comes from the **moulinette**, not from `evaluate`.
 Answer quality (whether Qwen phrased things well) is a separate
 judgement and is not part of recall@k.
 
-See [retrieving-methods.md](retrieving-methods.md) for BM25 vs TF-IDF.
+How to invoke the binary: [moulinette.md](moulinette.md).
+BM25 vs TF-IDF: [retrieving-methods.md](retrieving-methods.md).
