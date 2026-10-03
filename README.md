@@ -138,27 +138,67 @@ make install
 # or: uv sync
 ```
 
-### Full Pipeline
+### Full pipeline
+
+Two different jobs: **retrieve** (what the moulinette grades), then
+optionally **answer** (Qwen, Ollama). `search_dataset` does not call
+the LLM. It only writes `file_path` + character offsets for each
+question.
+
+```
+subject UnansweredQuestions  ── search_dataset ──►  StudentSearchResults
+                                                      (our top-k locations)
+subject AnsweredQuestions    ── moulinette ────────►  Recall@k  ← the grade
+StudentSearchResults         ── answer_dataset ────►  + Qwen text
+                                                      (demo, not recall)
+```
+
+**1. Index the corpus** (once; no questions, no LLM)
 
 ```sh
-# 1. Build the index (~2–5 min)
 make run
-# equivalent: uv run python -m src index --max_chunk_size 2000
+# same as: uv run python -m src index --max_chunk_size 2000
+```
 
-# 2. Search the docs dataset
+Writes `data/processed/` (BM25, and MiniLM if `--semantic`).
+
+**2. Retrieve** (`search_dataset` — BM25 only, no Ollama)
+
+Reads the subject's **UnansweredQuestions** (question text only).
+For each question, stores the top-k source **locations** as
+`StudentSearchResults`. The chunk text is not copied into this file;
+the moulinette later reads the spans from `data/raw/`.
+
+```sh
 uv run python -m src search_dataset \
   --dataset_path data/datasets/UnansweredQuestions/dataset_docs_public.json \
   --k 10 \
   --save_directory data/output/search_results/UnansweredQuestions
+```
 
-# 3. Score with the moulinette (our search JSON first, then ground truth)
-# see docs/moulinette.md
+Output:
+`data/output/search_results/UnansweredQuestions/dataset_docs_public.json`
+
+**3. Score retrieval** (moulinette — still no LLM)
+
+Compares **our** search JSON (argument 1) to the subject's
+**AnsweredQuestions** ground truth (argument 2). See
+[docs/moulinette.md](docs/moulinette.md).
+
+```sh
 ./moulinette evaluate_student_search_results \
   data/output/search_results/UnansweredQuestions/dataset_docs_public.json \
   data/datasets/AnsweredQuestions/dataset_docs_public.json \
   --k 10 --max_context_length 2000
+```
 
-# 4. Generate answers (Ollama must be running)
+**4. Generate answers** (optional for recall; needs Ollama)
+
+Reads the file from step 2, loads those spans from disk, calls Qwen.
+Writes `StudentSearchResultsAndAnswer` under
+`data/output/search_results_and_answer/`.
+
+```sh
 uv run python -m src answer_dataset \
   --student_search_results_path data/output/search_results/UnansweredQuestions/dataset_docs_public.json \
   --save_directory data/output/search_results_and_answer/UnansweredQuestions
