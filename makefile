@@ -65,6 +65,10 @@ search_dataset:
 		--dataset_path data/datasets/UnansweredQuestions/dataset_docs_public.json \
 		--k 10 \
 		--save_directory data/output/search_results/UnansweredQuestions
+	$(PYTHON) -m src search_dataset \
+		--dataset_path data/datasets/UnansweredQuestions/dataset_code_public.json \
+		--k 10 \
+		--save_directory data/output/search_results/UnansweredQuestions
 
 answer:
 	$(PYTHON) -m src answer "How to configure OpenAI server?" --k 10

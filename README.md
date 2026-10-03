@@ -223,7 +223,7 @@ uv run python -m src serve          [--host HOST] [--port INT] [--index_dir PATH
 | `make install` | Install dependencies with uv |
 | `make run` | Index the corpus (max_chunk_size=2000) |
 | `make debug` | Index via pdb |
-| `make search_dataset` | Search docs dataset, save to UnansweredQuestions/ |
+| `make search_dataset` | Search docs and code datasets, save to UnansweredQuestions/ |
 | `make evaluate` | Local recall@k check on docs results |
 | `make answer` | Answer one hardcoded question |
 | `make lint` | Run flake8 + mypy |
