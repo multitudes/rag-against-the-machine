@@ -1,17 +1,18 @@
 # Local HTTP API
 
-Bonus 5 of the subject: expose **search** and **answer** over a small
-local HTTP server so something other than the CLI can drive the RAG
-system (a script, `curl`, a notebook, a tiny UI).
+Bonus 5: **search** and **answer** over a small local HTTP server so
+a script, `curl`, a notebook, or a tiny UI can drive the same pipeline
+as the CLI.
 
-The moulinette still uses the CLI (`search_dataset` / `answer_dataset`).
-This server is for the defence demo and for you.
+The moulinette still uses the CLI (`search_dataset` /
+`answer_dataset`). `serve` is for the defence demo and for local
+tooling.
 
 ```sh
-# Index once (same as always)
+# index once (same as always)
 uv run python -m src index --max_chunk_size 2000 --semantic
 
-# Start the API (loopback, port 8000)
+# API on loopback, port 8000
 uv run python -m src serve
 # or: make serve
 ```
@@ -26,7 +27,7 @@ RAG API at http://127.0.0.1:8000
   POST /answer
 ```
 
-Leave that terminal open. In another one:
+We leave that process running and call it from another terminal:
 
 ```sh
 curl -s 'http://127.0.0.1:8000/health'
@@ -37,28 +38,28 @@ curl -s http://127.0.0.1:8000/search \
   -H 'Content-Type: application/json' \
   -d '{"query":"How to stop a worker?","k":5,"hybrid":true,"cache":true}'
 
-# Needs Ollama with qwen3:0.6b
+# needs Ollama with qwen3:0.6b
 curl -s http://127.0.0.1:8000/answer \
   -H 'Content-Type: application/json' \
   -d '{"query":"How to stop a worker?","k":5}'
 ```
 
-Stop the server with Ctrl+C.
+Ctrl+C stops the server.
 
 ---
 
 ## Why an API?
 
-The CLI is one process per command: start Python, load BM25, print,
-exit. That is perfect for the moulinette. It is awkward if you want to
-ask ten questions from a browser or another program.
+Each CLI command is its own process: start Python, load BM25, print,
+exit. That fits the moulinette. It is awkward for ten questions from
+a browser or another program.
 
 The HTTP server is **one long-lived process**. It loads the index once
 (bonus 4’s in-process `Searcher` cache) and then answers requests.
-`search --cache` still writes `query_cache.json`; here you pass
-`"cache": true` in the JSON (or `?cache=true`).
+`search --cache` still writes `query_cache.json`; here the same switch
+is `"cache": true` in the JSON (or `?cache=true`).
 
-Default bind is **127.0.0.1** — only your machine. Not a public website.
+Default bind is **127.0.0.1** — this machine only, not a public site.
 
 ---
 
@@ -108,23 +109,22 @@ Example response:
 
 ### `/answer`
 
-Same fields, plus `"answer": "…"` from Qwen. If Ollama is down you get
-**503** (`Ollama is not running`). Empty query or bad `k` is **400**.
-Missing index is **503**. Unknown path is **404**.
+Same fields, plus `"answer": "…"` from Qwen. If Ollama is down the
+status is **503** (`Ollama is not running`). Empty query or bad `k`
+is **400**. Missing index is **503**. Unknown path is **404**.
 
 No extra pip package: stdlib `http.server` only.
 
 ---
 
-## How to demo at the defence
+## Defence notes
 
-1. `index` (already done) then `serve`.
-2. Browser: `http://127.0.0.1:8000/` and `/health`.
-3. `curl` a `/search` — same sources as `search` on the CLI.
-4. Repeat with `"cache": true` and show `"cached": true`.
-5. Optional: `"hybrid": true` or `"semantic": true`.
-6. `/answer` with Ollama running — JSON with sources + text.
-7. Say the moulinette still uses the CLI; this is the extra interface.
+We `index` (if needed) then `serve`, open
+`http://127.0.0.1:8000/` and `/health` in a browser, `curl` `/search`
+(same sources as CLI `search`), repeat with `"cache": true` until
+`"cached": true`, optionally `"hybrid"` / `"semantic"`, then `/answer`
+with Ollama up. The moulinette still uses the CLI; this is the extra
+interface.
 
 ### Tests (offline, Ollama mocked)
 

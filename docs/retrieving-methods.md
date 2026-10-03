@@ -35,7 +35,7 @@ A word that appears many times in one chunk but almost nowhere else
 
 ### Intuition
 
-- Documents that use your query terms a lot score higher (TF).
+- Documents that use the query terms a lot score higher (TF).
 - Rare terms count more than common ones (IDF).
 
 A simple form of the weight for term \(t\) in document \(d\) is:
@@ -47,7 +47,7 @@ A simple form of the weight for term \(t\) in document \(d\) is:
 where \(N\) is the number of documents and \(\text{df}(t)\) is how many
 documents contain \(t\).
 
-At query time you usually:
+At query time a TF-IDF system typically:
 
 1. Turn the query and every document into TF-IDF vectors.
 2. Rank documents by **cosine similarity** (or a similar vector score)
@@ -92,7 +92,7 @@ fixes.
 | **k1** | Controls TF saturation (often ~1.2–2.0) |
 | **b** | Controls length normalisation (often ~0.75; `b=0` turns it off) |
 
-You usually do not need to tune these for a first working RAG index.
+We leave k1 and b at the `bm25s` defaults.
 
 ### Strengths
 
@@ -138,19 +138,17 @@ that BM25 is expected to retrieve a bit better than plain TF-IDF.
    chunk ids; metadata turns those ids into `MinimalSource` locations
    for the moulinette / LLM context.
 
-Embeddings (semantic search) would be a *bonus* layer on top of this,
-not a replacement for the required lexical method.
+MiniLM (`--semantic`) is a bonus layer on top of this, not a
+replacement for the required lexical method.
 
 ---
 
-## When would you pick TF-IDF instead?
+## Why we did not use TF-IDF
 
-- Teaching / coursework where the simpler formula is enough.
-- Tiny prototypes with `sklearn` already in the stack.
-- Experiments comparing “baseline TF-IDF” vs “BM25” on the same chunks.
-
-For this RAG defence corpus (code + docs, keyword-heavy questions),
-**BM25 is the better default**.
+TF-IDF is enough for a coursework baseline or a tiny `sklearn`
+prototype. Our corpus mixes 10-line configs and multi-thousand-line
+modules, and the questions are identifier-heavy, so **BM25 is the
+better default** (length normalisation + term saturation).
 
 ---
 

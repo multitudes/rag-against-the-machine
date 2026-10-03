@@ -3,8 +3,8 @@
 Bonus 1 of the subject: a **vector index** built with a lightweight CPU
 model (`all-MiniLM-L6-v2`) **next to** the lexical BM25 index.
 
-This document explains what embeddings are, how they retrieve, and how
-to run the `--semantic` flag on `index` and `search`.
+What embeddings are, how we retrieve with them, and how we run
+`--semantic` on `index` and `search`.
 
 ---
 
@@ -103,8 +103,8 @@ Hybrid (bonus 2) fuses both lists — see
 uv run python -m src search "How to stop a worker?" --k 5 --hybrid
 ```
 
-If you pass `--semantic` on `search` without having indexed with
-`--semantic`, the CLI logs an error and returns no hits (no traceback):
+If `search --semantic` runs before `index --semantic`, the CLI logs
+an error and returns no hits (no traceback):
 
 ```text
 ERROR:retrieval.semantic:Semantic index not found at
@@ -118,7 +118,7 @@ data/processed/embeddings.npy. Re-run index with --semantic.
 | BM25 `*.index.npy`, `corpus.jsonl`, `metadata.json`, … | always |
 | `data/processed/embeddings.npy` | only with `index --semantic` |
 
-Do not commit model weights or `embeddings.npy` (already under
+We do not commit model weights or `embeddings.npy` (already under
 `data/processed/`, gitignored).
 
 ### Tests (offline, model mocked)
@@ -162,13 +162,12 @@ Code: `src/retrieval/semantic.py` (`create_semantic_index`,
 
 ---
 
-## How to demo at the defence
+## Defence notes
 
-1. Show BM25 on a paraphrased question (few shared keywords).
-2. Same query with `--semantic`.
-3. Same query with `--hybrid` (RRF of both lists).
-4. Point at `embeddings.npy` next to `params.index.json`.
-5. State that BM25 remains the default / moulinette path.
+We show BM25 on a paraphrased question (few shared keywords), then
+the same query with `--semantic` and `--hybrid`. `embeddings.npy`
+sits next to `params.index.json`. BM25 stays the default / moulinette
+path.
 
 ---
 

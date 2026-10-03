@@ -1,65 +1,22 @@
-# vLLM
+# The vLLM corpus
 
-The vLLM folder contains the **source files and documentation** that the RAG system will use as its knowledge base. 
+Our knowledge base is the vLLM 0.10.1 tree under
+`data/raw/vllm-0.10.1/` (not `assets/`). The evaluator provides this
+checkout; we do not commit it.
 
-## What's in the vLLM folder:
+It is mostly:
 
-The vLLM repository typically contains:
+- **Python** — `vllm/`, examples, tests
+- **Docs** — `docs/` (Markdown / RST / HTML)
+- **Config** — YAML, JSON, TOML, Dockerfiles
+- **Binaries we skip** — `.so`, images, fonts, archives (see
+  [extensions.md](extensions.md))
 
-### 📁 **Source Code Files (.py)**
-- Python modules and classes
-- Implementation details
-- API definitions
-- Configuration options
+`index` walks that tree, chunks the text files, and stores locations
+as paths relative to the project root, e.g.
+`data/raw/vllm-0.10.1/vllm/entrypoints/openai/api_server.py`. The
+moulinette compares those strings verbatim.
 
-### 📄 **Documentation Files (.md, .rst)**
-- README files
-- Setup instructions
-- API documentation
-- Usage examples
-- Troubleshooting guides
-
-### ⚙️ **Configuration Files**
-- YAML/JSON config files
-- Requirements files
-- Docker files
-- CI/CD configurations
-
-### 📋 **Examples and Tests**
-- Example scripts
-- Test files
-- Sample configurations
-
-## How your RAG system uses it:
-
-```python
-# The ingestion process will:
-def ingest(self):
-    # 1. Scan the vLLM folder (assets/vllm-0.10.1/)
-    files = get_all_repository_files("assets/vllm-0.10.1/")
-    
-    # 2. Read each file's content
-    for file_path in files:
-        content = read_file(file_path)  # Read Python code, markdown docs, etc.
-        
-        # 3. Break into searchable chunks
-        chunks = chunk_content(content)
-        
-        # 4. Make it searchable
-        index_chunks(chunks, file_path)
-        store_chunks(chunks, file_path)
-```
-
-## When someone asks a question:
-
-**Question**: *"How do I start the vLLM OpenAI-compatible server?"*
-
-**The RAG system**:
-1. **Searches** through all the indexed vLLM files
-2. **Finds relevant chunks** from files like:
-   - `docs/getting_started.md`
-   - `examples/openai_server.py` 
-   - `vllm/entrypoints/openai/api_server.py`
-3. **Returns the most relevant information** to answer the question
-
-The goal is to build a system that can answer questions about vLLM by searching through its own source code and documentation.
+A typical question (“How do we start the OpenAI-compatible server?”)
+is answered by retrieving spans from those docs and entrypoints, then
+(optionally) sending the spans to Qwen.

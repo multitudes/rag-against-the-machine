@@ -1,4 +1,6 @@
-## Indexing — full call chain
+# Indexing workflow
+
+Call chain for `make run` / `index` in this repo.
 
 ```
 make run

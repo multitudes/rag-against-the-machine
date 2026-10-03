@@ -1,6 +1,7 @@
-# File Extension Guide for Ingestion
+# File extensions
 
-This table provides a summary of the file extensions found in the `assets/vllm-0.10.1` directory and the recommended strategy for ingesting them into the RAG pipeline.
+How we treat extensions under `data/raw/vllm-0.10.1/` in
+`chunk_content` / `IGNORE_EXTENSIONS`.
 
 | Extension | Description | Ingestion Strategy |
 | :--- | :--- | :--- |

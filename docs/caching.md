@@ -42,14 +42,12 @@ across requests.
 
 ---
 
-## How to demo at the defence
+## Defence notes
 
-1. `search "…" --k 5` (no flag) — watch BM25 load.
-2. Same query with `--cache` — first time still loads, writes
-   `query_cache.json`.
-3. Repeat `--cache` — log line `Query cache hit` and an instant print.
-4. Re-run `index`, then `--cache` again — miss, because the fingerprint
-   changed.
+We run `search "…" --k 5` without a flag (BM25 load), then the same
+query with `--cache` (still loads, writes `query_cache.json`). A
+repeat `--cache` logs `Query cache hit` and prints immediately.
+After `index`, `--cache` misses because the fingerprint changed.
 
 ### Tests (offline)
 

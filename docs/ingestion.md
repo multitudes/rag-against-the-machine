@@ -1,81 +1,36 @@
-**Ingestion** is the process of preparing and loading your data into your RAG system so it can be searched later. It's like building an index for a library - you need to organize all the books before people can find them.
+# Ingestion
 
-## What Ingestion Does:
+Ingestion is how we turn the vLLM tree into a searchable index. The
+CLI command is `index` (not a separate `ingest` mode).
 
-### 1. **Document Processing**
-- Read files from the vLLM repository
-- Extract text content from different file types (.py, .md, .txt, etc.)
-- Clean and preprocess the text
+## What we do
 
-### 2. **Chunking** 
-- Break large documents into smaller pieces (chunks)
-- Each chunk should be meaningful and searchable
-- You're using `chonkie` library for this
+1. **Read** files under `data/raw/vllm-0.10.1/` (`get_all_files`).
+2. **Chunk** each file with chonkie (`chunk_content`) so a hit is a
+   short, located span rather than a whole file.
+3. **Index** the chunk texts with BM25 (`bm25s` + Snowball stemmer).
+4. **Store** the sparse matrix, `corpus.jsonl`, and `metadata.json`
+   under `data/processed/`.
 
-### 3. **Indexing**
-- Create searchable indexes using TF-IDF or BM25
-- Store document embeddings or keyword indexes
-- You're using `chromadb` for vector storage
+With `--semantic` we also write MiniLM vectors (`embeddings.npy`)
+aligned with the same metadata rows. We do **not** use ChromaDB.
 
-### 4. **Storage**
-- Save the processed chunks and indexes
-- Make them ready for fast retrieval
+## How we run it
 
-## Your Two Ingestion Modes:
-
-### **Full Repository** (`mode="full"`)
-```python
-def ingest(self):
-    if self.mode == "full":
-        # Process ALL files in assets/vllm-0.10.1/
-        # - Python files (.py)
-        # - Documentation (.md, .rst)
-        # - Configuration files (.yaml, .json)
-        # - Everything!
+```sh
+make run
+# same as:
+uv run python -m src index --max_chunk_size 2000
 ```
 
-### **Selective Ingestion** (`mode="selective"`)
-```python
-def ingest(self):
-    if self.mode == "selective":
-        # 1. Read the questions dataset JSON file
-        # 2. Extract which files are mentioned in the questions
-        # 3. Only process THOSE specific files
-        # Much faster for testing!
-```
+Optional flags on the same command: `--semantic`, `--incremental`,
+`--repo_path`, `--index_dir`.
 
-## Example Flow:
+There is no `mode="full"` / `mode="selective"` switch. The moulinette
+expects a full corpus index. For local experiments we can point
+`--repo_path` at a smaller folder.
 
-```python
-# Your ingest function should do something like:
-def ingest(self):
-    print(f"🔄 Starting {self.mode} ingestion...")
-    
-    if self.mode == "selective":
-        # Load questions to find which files to process
-        files_to_process = self.extract_files_from_questions()
-    else:
-        # Get all files in repository
-        files_to_process = self.get_all_repository_files()
-    
-    for file_path in files_to_process:
-        # 1. Read file content
-        content = self.read_file(file_path)
-        
-        # 2. Chunk the content (using chonkie)
-        chunks = self.chunk_content(content)
-        
-        # 3. Create searchable index (using bm25s)
-        self.index_chunks(chunks, file_path)
-        
-        # 4. Store in vector database (using chromadb)
-        self.store_chunks(chunks, file_path)
-    
-    print("✅ Ingestion completed!")
-```
+## After ingestion
 
-## Why Selective is Recommended for Testing:
-- **Faster**: Only processes files mentioned in your test questions
-- **Focused**: Ensures you have the right content for evaluation
-- **Efficient**: Good for development and debugging
-
+`search` and `search_dataset` load `data/processed/` and never walk
+the raw tree again, until the next `index`.

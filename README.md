@@ -118,17 +118,16 @@ The index is loaded with `mmap=True` to reduce RAM usage on large corpora.
 
 ## Instructions
 
-### Prerequisites
-
-- [uv](https://docs.astral.sh/uv/) — Python package and project manager
-- [Ollama](https://ollama.com/) with `qwen3:0.6b` pulled (for answer generation only)
-- Python 3.12 recommended (3.10+ required)
+We manage the project with [uv](https://docs.astral.sh/uv/). Answer
+generation needs [Ollama](https://ollama.com/) with `qwen3:0.6b`.
+Python 3.12 is what we pin locally (`.python-version`); 3.10+ is the
+subject floor.
 
 ```sh
-# Install uv (if not already installed)
+# uv, if the machine does not have it yet
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Pull the model (for answer generation)
+# model weights for answer generation
 ollama pull qwen3:0.6b
 ```
 
@@ -262,7 +261,7 @@ offsets from chonkie directly avoids any off-by-one errors that re-computing lin
 conversions would introduce.
 
 **`answer_dataset` consumes pre-computed search results:** Decoupling retrieval and
-generation means you can iterate on recall (fast) without re-running the slow LLM
+generation means we can iterate on recall (fast) without re-running the slow LLM
 inference loop, and vice versa.
 
 **Ollama for LLM serving:** Ollama manages model weights, quantisation, and the
@@ -314,7 +313,7 @@ Paths are stored exactly as passed to `get_all_files()` — which walks from
 
 ### AI Usage
 
-AI tools (Claude via Cursor) were used in this project for the following tasks:
+We used AI tools (Claude via Cursor) for:
 
 - **Gap analysis:** comparing the existing codebase against the new subject specification
   to identify missing fields, wrong CLI signatures, and incorrect output paths
@@ -325,6 +324,5 @@ AI tools (Claude via Cursor) were used in this project for the following tasks:
   exports and scipy's `Any`-typed return values
 - **Debugging:** diagnosing the macOS 27 + Python 3.10 + scipy binary incompatibility
 
-All generated code was reviewed, tested, and understood before being committed.
-The retrieval algorithm, chunking strategy, and system architecture decisions were
-made independently.
+We reviewed, tested, and kept only the generated code we understand.
+Retrieval, chunking, and architecture choices are ours.

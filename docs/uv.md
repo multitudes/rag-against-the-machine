@@ -1,87 +1,38 @@
-# Using `uv` with Python Projects
+# uv
 
-`uv` is a fast Python package manager and virtual environment tool. In this project, we are required to use `uv` for dependency management and running our code.
+The subject requires **uv** for install and run. The moulinette and
+reviewers call `uv sync` from the repo root. We keep `pyproject.toml`
+and `uv.lock` there.
 
-## Setting Up the Environment
+## How we work in this repo
 
-1. **Install `uv`** (if not already installed):
-```zsh
+```sh
+# one-time on a machine
 curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# create .venv and install runtime + dev groups (pytest, flake8, mypy)
+make install
+# same as: uv sync
+
+# run the CLI inside that env
+uv run python -m src --help
+uv run python -m src index --max_chunk_size 2000
 ```
 
-2. **Initialize a new uv project** (modern approach):
-```zsh
-uv init
-```
-This creates a `pyproject.toml` file for dependency management.
+`uv run` picks the project interpreter; we do not activate `.venv`
+by hand.
 
-3. **Add dependencies:**
-```zsh
-uv add torch transformers huggingface-hub
-uv add --dev flake8  # for development dependencies
-```
+## Dependencies
 
-4. **Install/sync dependencies:**
-```zsh
-uv sync
-```
-This installs all dependencies from `pyproject.toml` and creates/updates `uv.lock`.
+Runtime packages live in `[project] dependencies` in `pyproject.toml`
+(`fire`, `bm25s`, `chonkie`, `pydantic`, `sentence-transformers`, …).
+Lint and test tools are the `dev` group. After `uv add <pkg>` we
+commit the updated lockfile.
 
-## Running Your Project
-
-To run your main script as required by the project:
-
-```zsh
-uv run python -m src
-```
-
-This command will:
-- Automatically use the correct Python interpreter and virtual environment
-- Run the `src` module as the entry point
-- No need to manually activate the virtual environment
-
-## Common `uv` Commands
-
-- **Add a package:**
-```zsh
-uv add <package>
-```
-- **Add development dependency:**
-```zsh
-uv add --dev <package>
-```
-- **Remove a package:**
-```zsh
-uv remove <package>
-```
-- **List installed packages:**
-```zsh
-uv tree
-```
-- **Run scripts:**
-```zsh
-uv run python <script.py>
-```
-- **Sync dependencies:**
-```zsh
-uv sync
-```
-
-## Project Structure
-
-With modern `uv`, your project uses:
-- `pyproject.toml` - Project configuration and dependencies
-- `uv.lock` - Locked dependency versions for reproducibility
-- `.venv/` - Virtual environment (auto-created)
-
-No `requirements.txt` file is needed.
-
-## Notes
-- `uv run` automatically manages the virtual environment - no manual activation needed
-- The `uv.lock` file ensures reproducible builds across different machines
-- For this project, all classes must use `pydantic` for validation, and you may use `numpy` and `json`
-- Do **not** use forbidden packages (see README for details)
+We do not use `requirements.txt`. Python 3.12 is pinned in
+`.python-version` (3.10+ is still what `requires-python` allows).
 
 ## References
+
 - [uv documentation](https://docs.astral.sh/uv/)
-- [pyproject.toml specification](https://packaging.python.org/en/latest/specifications/pyproject-toml/)
+- [pyproject.toml spec](https://packaging.python.org/en/latest/specifications/pyproject-toml/)

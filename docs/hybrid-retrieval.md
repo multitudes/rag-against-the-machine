@@ -60,7 +60,7 @@ uv run python -m src search "How to stop a worker?" --k 5 --hybrid
 If `embeddings.npy` is missing, `--hybrid` logs the semantic error and
 falls back to BM25-only fusion (still prints hits).
 
-`search_dataset` / evaluate stay on BM25 until you A/B Recall@5.
+`search_dataset` / `evaluate` stay on BM25 until we A/B Recall@5.
 
 ### Tests (offline, model mocked)
 

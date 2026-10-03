@@ -51,14 +51,14 @@ not rewrite the matrix.
 
 ---
 
-## How to demo at the defence
+## Defence notes
 
-1. Full index once (`index --semantic`).
-2. Edit one file under `data/raw/vllm-0.10.1/` (or `touch` it).
-3. Re-run `index --semantic --incremental`.
-4. Point at the log: `Incremental: 1 changed, 0 added, 0 deleted, …`
-   and a short tqdm over changed files only.
-5. `search` still finds both the edited file and the rest of the corpus.
+We full-index once (`index --semantic`), edit (or `touch`) one file
+under `data/raw/vllm-0.10.1/`, then re-run
+`index --semantic --incremental`. The log should read
+`Incremental: 1 changed, 0 added, 0 deleted, …` with tqdm over
+changed files only. `search` still finds both the edited file and
+the rest of the corpus.
 
 ### Tests (offline)
 
