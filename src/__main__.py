@@ -9,7 +9,13 @@ import requests
 from tqdm import tqdm
 
 from answering.answer import answer_from_search_result, get_answer
-from core.config import MAX_CHUNK_SIZE, OLLAMA_HEALTH_URL
+from api.server import run_server
+from core.config import (
+    API_DEFAULT_HOST,
+    API_DEFAULT_PORT,
+    MAX_CHUNK_SIZE,
+    OLLAMA_HEALTH_URL,
+)
 from core.schemas import (
     ChunkSource,
     MinimalSource,
@@ -454,6 +460,59 @@ class RagCLI:
             f"Processed {len(minimal_answers)} of {total} questions\n"
             f"Saved student_search_results_and_answer to {output_path}"
         )
+
+    # ------------------------------------------------------------------
+    # serve (bonus 5)
+    # ------------------------------------------------------------------
+
+    def serve(
+        self,
+        host: str = API_DEFAULT_HOST,
+        port: int = API_DEFAULT_PORT,
+        index_dir: str = DEFAULT_INDEX_DIR,
+    ) -> None:
+        """
+        Serve search and answer over a local HTTP API.
+
+        Args:
+            host: Bind address (default 127.0.0.1).
+            port: TCP port (default 8000).
+            index_dir: Path to the BM25 index directory.
+
+        """
+        if not host or not str(host).strip():
+            logger.error("host cannot be empty.")
+            return
+        if port <= 0 or port > 65535:
+            logger.error("port must be in 1..65535.")
+            return
+        if not Path(index_dir).exists():
+            logger.error(
+                "Index directory '%s' not found. Please run 'index' first.",
+                index_dir,
+            )
+            return
+        try:
+            get_cached_searcher(index_dir)
+        except FileNotFoundError:
+            logger.exception("Index files not found")
+            return
+
+        print(
+            f"RAG API at http://{host}:{port}\n"
+            f"  GET  /health\n"
+            f"  GET  /search?query=...&k=5\n"
+            f"  POST /search\n"
+            f"  POST /answer"
+        )
+        try:
+            run_server(host, port, index_dir)
+        except OSError:
+            logger.exception(
+                "Could not bind API on %s:%s",
+                host,
+                port,
+            )
 
     # ------------------------------------------------------------------
     # evaluate

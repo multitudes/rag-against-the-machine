@@ -82,6 +82,22 @@ def test_search_rejects_bad_k(cli: Any, caplog: Any) -> None:
     assert "positive integer" in caplog.text
 
 
+def test_serve_rejects_missing_index(
+    cli: Any,
+    tmp_path: Path,
+    caplog: Any,
+) -> None:
+    """serve returns early when the index directory is missing."""
+    cli.serve(index_dir=str(tmp_path / "nope"), port=8000)
+    assert "not found" in caplog.text
+
+
+def test_serve_rejects_bad_port(cli: Any, caplog: Any) -> None:
+    """serve returns early when the port is out of range."""
+    cli.serve(port=0)
+    assert "1..65535" in caplog.text
+
+
 def test_search_rejects_missing_index(
     cli: Any,
     tmp_path: Path,

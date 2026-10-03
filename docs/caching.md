@@ -37,7 +37,7 @@ deletes `query_cache.json` so the file does not grow stale entries.
 fingerprint is unchanged. A cache **miss** on `search --cache` reuses
 that instance instead of calling `BM25.load` again. A one-shot CLI
 process only benefits on the query-file hit (no BM25 load at all). The
-in-process cache is what a later local HTTP API (bonus 5) would use
+local HTTP API (`serve`, bonus 5) reuses that in-process Searcher
 across requests.
 
 ---

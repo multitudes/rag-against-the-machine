@@ -179,4 +179,5 @@ Code: `src/retrieval/semantic.py` (`create_semantic_index`,
 - [hybrid-retrieval.md](hybrid-retrieval.md) (bonus 2: RRF of BM25 + MiniLM)
 - [incremental-indexing.md](incremental-indexing.md) (bonus 3: re-chunk changed files)
 - [caching.md](caching.md) (bonus 4: index + query cache)
+- [http-api.md](http-api.md) (bonus 5: local HTTP API)
 - Subject bonus 1: vector index *next to* the lexical index

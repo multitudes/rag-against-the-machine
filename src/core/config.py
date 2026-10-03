@@ -20,3 +20,7 @@ FILES_MANIFEST_FILENAME = "files.json"
 
 # Bonus 4 — on-disk query cache next to the BM25 files.
 QUERY_CACHE_FILENAME = "query_cache.json"
+
+# Bonus 5 — local HTTP API (loopback only by default).
+API_DEFAULT_HOST = "127.0.0.1"
+API_DEFAULT_PORT = 8000

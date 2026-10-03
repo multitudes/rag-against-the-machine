@@ -79,6 +79,9 @@ evaluate:
 		--student_search_results_path data/output/search_results/UnansweredQuestions/dataset_docs_public.json \
 		--dataset_path data/datasets/AnsweredQuestions/dataset_docs_public.json
 
+serve:
+	$(PYTHON) -m src serve --host 127.0.0.1 --port 8000
+
 moulinette:
 	./moulinette evaluate_student_search_results data/output/search_results/UnansweredQuestions/dataset_docs_public.json data/datasets/AnsweredQuestions/dataset_docs_public.json --k 10 --max_context_length 2000
 
@@ -86,4 +89,5 @@ help:
 	$(PYTHON) -m src --help
 
 .PHONY: install run debug lint lint-strict test clean fclean \
-        index search search_dataset evaluate answer answer_dataset help moulinette
+        index search search_dataset evaluate answer answer_dataset \
+        serve help moulinette
