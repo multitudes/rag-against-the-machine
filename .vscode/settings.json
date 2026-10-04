@@ -1,4 +1,3 @@
 {
-	"cmake.sourceDirectory": "/Users/laurentb/Dev/rage-against-the-machine/data/raw/vllm-0.10.1",
-	"python.languageServer": "Pylance"
+	"cmake.sourceDirectory": "/Users/laurentb/Dev/rage-against-the-machine/data/raw/vllm-0.10.1"
 }

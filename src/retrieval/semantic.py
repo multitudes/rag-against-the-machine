@@ -98,7 +98,7 @@ def create_semantic_index(
     path = embeddings_path(index_dir)
     np.save(path, matrix)
     logger.info(
-        "Semantic index saved to %s (shape %s)", path, matrix.shape
+        "Semantic index saved to %s (shape %s)", path, matrix.shape,
     )
 
 

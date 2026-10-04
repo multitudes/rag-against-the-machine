@@ -4,12 +4,14 @@ from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
+import pytest
 
 from core.schemas import ChunkSource, MinimalSource, UnansweredQuestion
 from ingestion.chunking import chunk_content
 from ingestion.file_processing import get_all_files
 from ingestion.incremental import (
     chunk_all_files,
+    collect_chunks,
     collect_chunks_incremental,
     write_file_manifest,
 )
@@ -194,6 +196,36 @@ def test_incremental_adds_new_file(tmp_path: Path) -> None:
     assert extra_path in paths
 
 
+def test_collect_chunks_full_has_empty_old_list(
+    tmp_path: Path,
+) -> None:
+    """Without --incremental we wrap a full chunk pass."""
+    repo = _tiny_repo(tmp_path)
+    files = get_all_files(str(repo))
+    result = collect_chunks(files, 200, str(tmp_path / "idx"))
+    assert result.nothing_changed is False
+    assert result.old_chunks == []
+    assert result.unchanged_files == set()
+    assert result.chunks
+
+
+def test_collect_chunks_fallback_matches_full(
+    tmp_path: Path,
+) -> None:
+    """Missing baseline still returns a full ChunkBuildResult."""
+    repo = _tiny_repo(tmp_path)
+    files = get_all_files(str(repo))
+    result = collect_chunks(
+        files,
+        200,
+        str(tmp_path / "missing"),
+        incremental=True,
+    )
+    assert result.nothing_changed is False
+    assert result.old_chunks == []
+    assert result.chunks
+
+
 def test_incremental_falls_back_without_index(
     tmp_path: Path,
 ) -> None:
@@ -228,6 +260,19 @@ def test_load_chunks_roundtrip(tmp_path: Path) -> None:
     assert loaded
     assert all(c.text for c in loaded)
     assert all(c.source.file_path.endswith(".py") for c in loaded)
+
+
+def test_load_chunks_rejects_non_object_corpus_line(
+    tmp_path: Path,
+) -> None:
+    """A corpus line that is not {id, text} is an error."""
+    repo = _tiny_repo(tmp_path)
+    index_dir = tmp_path / "idx"
+    _full_index(repo, index_dir)
+    corpus = index_dir / "corpus.jsonl"
+    corpus.write_text('"just a string"\n', encoding="utf-8")
+    with pytest.raises(ValueError, match="text"):
+        load_chunks_from_index(str(index_dir))
 
 
 def test_merge_semantic_encodes_only_new_texts(

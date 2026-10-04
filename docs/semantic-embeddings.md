@@ -29,6 +29,85 @@ mapping from lots of text pairs: similar meanings → similar vectors.
 
 Typical size for MiniLM: **384 dimensions** per chunk or query.
 
+Each chunk becomes **one** vector of 384 floats, no matter how long
+the text is. `2000` is only our max character length (moulinette).
+A 40-character heading and a 2000-character page both become 384
+numbers. Length is not the vector size. That is why
+`embeddings.npy` is `(n_chunks, 384)`: one row per chunk, aligned
+with BM25.
+
+---
+
+## Tokens, the 256-token window, and the 384 floats
+
+The 384 floats are **not** “one number per token.” Tokens are the
+model’s **input**. The 384 numbers are the **output**: one compressed
+meaning vector for the whole chunk.
+
+**1. Tokenize the chunk.** MiniLM does not read characters. A
+tokenizer cuts the text into subword pieces (often a word, sometimes
+`##ing`, `v`, `##LLM`):
+
+```
+"How do I stop a worker?"
+  → [CLS] how do i stop a worker ? [SEP]
+```
+
+`[CLS]` / `[SEP]` are bookends the model always adds.
+
+**2. 256-token window.** `all-MiniLM-L6-v2` only looks at the
+**first 256 tokens** of that list (including the bookends). Extra
+tokens are dropped. A short chunk fits. A dense 2000-character chunk
+can be longer than 256 tokens, so the **tail of the chunk is
+invisible** to MiniLM. BM25 still indexed the whole span; the vector
+only “saw” the prefix.
+
+**3. One hidden vector per token, then collapse.** The transformer
+turns **each** token into a 384-float vector (same width as the
+model). Internally we briefly have something like `(256, 384)` — a
+stack of per-token meanings.
+
+Then **mean pooling**: average those token vectors (usually ignoring
+padding) into **one** 384-vector. We also L2-normalise it so cosine
+is just a dot product.
+
+```txt
+chunk text
+    → tokens (≤ 256)
+    → 256 × 384 hidden states
+    → average
+    → 1 × 384  = one row in embeddings.npy
+```
+
+**What the floats correspond to.** Nothing we can name. Dimension 17
+is not “verbs” or “vLLM.” They are **learned axes** in a meaning
+space: training pushed similar sentences together and different ones
+apart. We only care that two 384-lists that point the same way are
+about the same thing.
+
+So: tokens = how the model *reads*; 384 floats = one fingerprint of
+*what it understood* from (at most) those 256 tokens.
+
+English prose is often **~4–5 characters per token**, so 256 tokens
+is roughly **1000 characters**. Code and markdown are usually denser
+(punctuation, identifiers, URLs), so a 2000-character Python chunk
+can blow past the window more easily. That makes 2000 a bit long for
+MiniLM: the vector is a fingerprint of the **prefix**, and the tail
+is dropped. **1000 would fit semantic search better**, but it is not
+a free upgrade for hybrid. Hybrid ranks the **same** chunk list as
+BM25 — we do not keep a 2000-char lexical index and a 1000-char
+vector index. `2000` is the moulinette **ceiling** (any longer span
+is rejected), and our graded Recall@5 was measured on that index.
+Re-chunking the default path to 1000 would change BM25 IDF and split
+some official spans, so we would need to re-run the moulinette on
+docs and code before calling it a win. On the current 2000-char
+chunks, hybrid already papers over the mismatch: BM25 still sees the
+whole span (including the tail MiniLM never read), and RRF keeps a
+hit if either list ranks it well. We keep **2000 for `make run` /
+defence**. A 1000-char index is only a side experiment
+(`index --max_chunk_size 1000 --semantic`, then `search --hybrid`)
+until those recall numbers are checked.
+
 ---
 
 ## How semantic retrieval works
@@ -152,7 +231,7 @@ must not replace BM25 for evaluation.
 - Hugging Face
   [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
 - ~22M parameters, **CPU** (`device="cpu"`)
-- 384 dimensions per text
+- 384 dimensions per text (after mean pooling; 256-token window)
 - First run downloads weights into `~/.cache/huggingface/`
 - Used only to encode chunks and queries — Qwen/Ollama still generate
   answers

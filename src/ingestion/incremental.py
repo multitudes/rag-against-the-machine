@@ -13,14 +13,17 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from tqdm import tqdm
 
 from core.config import FILES_MANIFEST_FILENAME
-from core.schemas import ChunkSource
 from ingestion.chunking import chunk_content
 from ingestion.indexing import load_chunks_from_index
+
+# because ruff was complaining we import the class only to use as type hint
+if TYPE_CHECKING:
+    from core.schemas import ChunkSource
 
 logger = logging.getLogger(__name__)
 
@@ -207,6 +210,45 @@ def chunk_all_files(
     for file_path in tqdm(files, desc="Chunking files"):
         chunks.extend(chunk_content(file_path, max_chunk_size))
     return chunks
+
+
+def collect_chunks(
+    files: list[str],
+    max_chunk_size: int,
+    index_dir: str,
+    incremental: bool = False,
+) -> ChunkBuildResult:
+    """
+    Chunk the corpus, incrementally when requested and possible.
+
+    Args:
+        files: Corpus paths from get_all_files.
+        max_chunk_size: Maximum characters per chunk.
+        index_dir: Directory of the previous index.
+        incremental: If True, reuse unchanged files when a baseline
+            exists.
+
+    Returns:
+        A ChunkBuildResult. ``nothing_changed`` is True when the
+        index is already current. ``old_chunks`` is empty on a full
+        reindex (flag off, or incremental fallback).
+
+    """
+    if incremental:
+        result = collect_chunks_incremental(
+            files,
+            max_chunk_size,
+            index_dir,
+        )
+        if result is not None:
+            return result
+    chunks = chunk_all_files(files, max_chunk_size)
+    return ChunkBuildResult(
+        chunks=chunks,
+        old_chunks=[],
+        unchanged_files=set(),
+        nothing_changed=False,
+    )
 
 
 def collect_chunks_incremental(

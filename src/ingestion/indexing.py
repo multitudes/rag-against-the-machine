@@ -78,13 +78,10 @@ def create_bm25_index(
     #   corpus.mmindex.json     byte offsets into corpus.jsonl for mmap
     retriever.save(index_dir, corpus=corpus)
 
-    # --- Tokenizer.save_vocab() writes vocab.tokenizer.json ---
-    # Stemmed/token vocabulary of the Tokenizer class (distinct from
-    # vocab.index.json above, which belongs to the BM25 index itself).
-    tokenizer.save_vocab(index_dir)
-
     # --- Tokenizer.save_stopwords() writes stopwords.tokenizer.json ---
     # English stopwords list used during tokenization.
+    # We do not save_vocab(): a fresh Tokenizer was never fitted, so
+    # vocab.tokenizer.json would be empty. Live terms are vocab.index.json.
     tokenizer.save_stopwords(index_dir)
 
     logger.info("Saving BM25 index to %s...", index_dir)
@@ -99,15 +96,24 @@ def load_chunks_from_index(index_dir: str) -> list[ChunkSource]:
     """
     Rebuild ChunkSource rows from metadata.json and corpus.jsonl.
 
+    Used only by incremental indexing. A full index never calls this:
+    it re-chunks ``data/raw/``. After ``create_bm25_index`` we no
+    longer have ChunkSource objects in memory — text lives in
+    corpus.jsonl and paths/offsets in metadata.json. This zips them
+    back, in corpus order, so unchanged files can be reused without
+    chonkie (and MiniLM rows stay aligned).
+
     Args:
         index_dir: Directory that holds a previous BM25 index.
 
     Returns:
-        Chunks aligned with the saved corpus order.
+        Chunks aligned with the saved corpus order (row i = BM25
+        row i).
 
     Raises:
         FileNotFoundError: If metadata or corpus is missing.
-        ValueError: If the two files disagree on length.
+        ValueError: If a corpus line is not ``{id, text}``, or the
+            two files disagree on length.
         KeyError: If a metadata row is missing required keys.
 
     """
@@ -120,12 +126,10 @@ def load_chunks_from_index(index_dir: str) -> list[ChunkSource]:
         for line in f:
             raw = line.strip()
             if not raw:
+                # JSONL often ends with a newline; that last read is
+                # empty, not a missing chunk.
                 continue
-            doc = json.loads(raw)
-            if isinstance(doc, dict):
-                texts.append(str(doc.get("text", "")))
-            else:
-                texts.append(str(doc))
+            texts.append(_text_from_corpus_line(raw))
     if len(texts) != len(metadata):
         msg = (
             f"corpus.jsonl has {len(texts)} rows but "
@@ -133,6 +137,7 @@ def load_chunks_from_index(index_dir: str) -> list[ChunkSource]:
         )
         raise ValueError(msg)
     chunks: list[ChunkSource] = []
+	# strict=True raises ValueError if the lengths differ.
     for text, src in zip(texts, metadata, strict=True):
         chunks.append(
             ChunkSource(
@@ -145,3 +150,27 @@ def load_chunks_from_index(index_dir: str) -> list[ChunkSource]:
             )
         )
     return chunks
+
+
+def _text_from_corpus_line(raw: str) -> str:
+    """
+    Read the chunk text from one corpus.jsonl line.
+
+    bm25s writes ``{"id": 0, "text": "…"}``. This is plain JSON, not
+    a Pydantic model (ChunkSource is rebuilt after the zip).
+
+    Args:
+        raw: Stripped JSON line.
+
+    Returns:
+        The ``text`` field.
+
+    Raises:
+        ValueError: If the line is not an object with ``text``.
+
+    """
+    doc = json.loads(raw)
+    if not isinstance(doc, dict) or "text" not in doc:
+        msg = "corpus.jsonl line must be an object with a 'text' field"
+        raise ValueError(msg)
+    return str(doc["text"])

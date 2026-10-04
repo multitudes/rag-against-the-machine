@@ -17,7 +17,6 @@ from core.config import (
     OLLAMA_HEALTH_URL,
 )
 from core.schemas import (
-    ChunkSource,
     MinimalSource,
     RagDataset,
     StudentSearchResults,
@@ -26,8 +25,7 @@ from core.schemas import (
 )
 from ingestion.file_processing import get_all_files
 from ingestion.incremental import (
-    chunk_all_files,
-    collect_chunks_incremental,
+    collect_chunks,
     write_file_manifest,
 )
 from ingestion.indexing import create_bm25_index
@@ -130,64 +128,38 @@ class RagCLI:
                 logger.warning("No files found to process.")
                 return
 
-            old_chunks: list[ChunkSource] = []
-            unchanged_files: set[str] = set()
-            did_incremental = False
-            if incremental:
-                result = collect_chunks_incremental(
-                    files_to_process,
-                    max_chunk_size,
-                    index_dir,
+            result = collect_chunks(
+                files_to_process,
+                max_chunk_size,
+                index_dir,
+                incremental,
+            )
+            if result.nothing_changed:
+                duration = time.time() - start_time
+                print(
+                    f"Index already up to date under "
+                    f"{index_dir} ({duration:.1f}s)",
                 )
-                if result is not None and result.nothing_changed:
-                    duration = time.time() - start_time
-                    print(
-                        f"Index already up to date under "
-                        f"{index_dir} ({duration:.1f}s)",
-                    )
-                    return
-                if result is not None:
-                    chunks = result.chunks
-                    old_chunks = result.old_chunks
-                    unchanged_files = result.unchanged_files
-                    did_incremental = True
-                else:
-                    chunks = chunk_all_files(
-                        files_to_process,
-                        max_chunk_size,
-                    )
-            else:
-                chunks = chunk_all_files(
-                    files_to_process,
-                    max_chunk_size,
-                )
-
-            if not chunks:
+                return
+            if not result.chunks:
                 logger.warning("No chunks created from files.")
                 return
 
             Path(index_dir).mkdir(parents=True, exist_ok=True)
-            create_bm25_index(chunks, index_dir)
+            create_bm25_index(result.chunks, index_dir)
             emb_path = embeddings_path(index_dir)
-            if semantic or (
-                did_incremental and emb_path.exists()
-            ):
-                if (
-                    did_incremental
-                    and emb_path.exists()
-                    and old_chunks
-                ):
-                    merge_semantic_index(
-                        old_chunks,
-                        chunks,
-                        unchanged_files,
-                        index_dir,
-                    )
-                else:
-                    create_semantic_index(
-                        [chunk.text for chunk in chunks],
-                        index_dir,
-                    )
+            if result.old_chunks and emb_path.exists():
+                merge_semantic_index(
+                    result.old_chunks,
+                    result.chunks,
+                    result.unchanged_files,
+                    index_dir,
+                )
+            elif semantic:
+                create_semantic_index(
+                    [chunk.text for chunk in result.chunks],
+                    index_dir,
+                )
             write_file_manifest(
                 files_to_process,
                 max_chunk_size,
