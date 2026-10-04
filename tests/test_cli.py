@@ -8,6 +8,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from core.schemas import (
     AnsweredQuestion,
     ChunkSource,

@@ -29,8 +29,8 @@ Runtime packages live in `[project] dependencies` in `pyproject.toml`
 Lint and test tools are the `dev` group. After `uv add <pkg>` we
 commit the updated lockfile.
 
-We do not use `requirements.txt`. Python 3.12 is pinned in
-`.python-version` (3.10+ is still what `requires-python` allows).
+We do not use `requirements.txt`. Python **3.12+** is required
+(`requires-python` and `.python-version`).
 
 ## References
 

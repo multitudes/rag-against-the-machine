@@ -9,6 +9,7 @@ joins, exists-checks, and `open` on one object.
 | `os.path.exists(p)` | `Path(p).exists()` |
 | `os.makedirs(p, exist_ok=True)` | `Path(p).mkdir(parents=True, exist_ok=True)` |
 | `os.path.join(a, b)` | `Path(a) / b` |
+| `os.walk(p)` | `Path(p).walk()` (Python 3.12+) |
 | `os.path.basename(p)` | `Path(p).name` |
 | `open(p, …)` | `Path(p).open(…)` |
 

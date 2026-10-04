@@ -134,7 +134,7 @@ class Searcher:
                     file_path=chunk["file_path"],
                     first_character_index=chunk["first_character_index"],
                     last_character_index=chunk["last_character_index"],
-                )
+                ),
             )
         return retrieved_sources
 

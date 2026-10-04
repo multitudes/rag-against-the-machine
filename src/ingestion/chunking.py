@@ -30,10 +30,12 @@ CODE_LANGUAGES = {
     "cmake": "cmake", "cmakelists.txt": "cmake",
     "js": "javascript",
 }
+
 TEXT_EXTENSIONS = [
     "txt", "toml", "yaml", "yml", "json", "license", "dco",
     "manifest.in", "in", "j2", "jinja", "tpl", "jsonl", "patch", "env",
 ]
+
 MARKDOWN_EXTENSIONS = ["md", "html", "rst"]
 
 

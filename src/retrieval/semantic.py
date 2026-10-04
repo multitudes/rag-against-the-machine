@@ -10,11 +10,11 @@ from __future__ import annotations
 import logging
 from functools import lru_cache
 from pathlib import Path
-from sentence_transformers import SentenceTransformer
 from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
+from sentence_transformers import SentenceTransformer
 
 from core.config import EMBEDDING_MODEL, EMBEDDINGS_FILENAME, RRF_K
 from core.schemas import ChunkSource
@@ -27,11 +27,13 @@ def _load_model() -> Any:
     """
     Load MiniLM once on CPU.
 
+    @lru_cache is a decorator from functools. It remembers the return value of a
+    function so the next call with the same arguments skips the body.
+
     Returns:
         A sentence-transformers SentenceTransformer instance.
 
     """
-
     logger.info("Loading embedding model %s on cpu", EMBEDDING_MODEL)
     return SentenceTransformer(EMBEDDING_MODEL, device="cpu")
 
@@ -149,13 +151,21 @@ def merge_semantic_index(
         )
         return
 
+    # The key is the full file_path from the chunk
+    # The value is a list of old matrix row indexes for that file
+    # Here I create a dict for the old state
     old_rows_by_file: dict[str, list[int]] = {}
     for i, chunk in enumerate(old_chunks):
         old_rows_by_file.setdefault(
             chunk.source.file_path,
             [],
         ).append(i)
+
+    # cursor:how many chunks of this file have we already copied
+    # it is like a scratchpad for the current file
     cursor: dict[str, int] = {}
+    # rows is the new embedding list as python list first
+    # None means “encode this later” (changed / added file)
     rows: list[NDArray[np.float32] | None] = []
     to_encode: list[str] = []
     encode_at: list[int] = []
@@ -168,6 +178,8 @@ def merge_semantic_index(
                 old_i = old_rows_by_file[file_path][idx_in_file]
                 rows.append(old_matrix[old_i])
             else:
+                # Those texts go into to_encode; we park None
+                # in rows and remember the slot in encode_at
                 encode_at.append(len(rows))
                 rows.append(None)
                 to_encode.append(chunk.text)
@@ -198,6 +210,8 @@ def merge_semantic_index(
     if not filled:
         logger.warning("No embedding rows to save. Skipping.")
         return
+    # takes a list of same-shaped arrays and glues them into
+    # one extra dimension.
     matrix = np.stack(filled).astype(np.float32)
     np.save(path, matrix)
     logger.info(

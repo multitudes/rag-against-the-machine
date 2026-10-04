@@ -13,17 +13,13 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from tqdm import tqdm
 
 from core.config import FILES_MANIFEST_FILENAME
+from core.schemas import ChunkSource, MinimalSource
 from ingestion.chunking import chunk_content
-from ingestion.indexing import load_chunks_from_index
-
-# because ruff was complaining we import the class only to use as type hint
-if TYPE_CHECKING:
-    from core.schemas import ChunkSource
 
 logger = logging.getLogger(__name__)
 
@@ -141,12 +137,100 @@ def _load_manifest(index_dir: str) -> dict[str, Any] | None:
     return data
 
 
+def load_chunks_from_index(index_dir: str) -> list[ChunkSource]:
+    """
+    Rebuild ChunkSource rows from metadata.json and corpus.jsonl.
+
+    Used only by incremental indexing. A full index never calls this:
+    it re-chunks ``data/raw/``. After ``create_bm25_index`` we no
+    longer have ChunkSource objects in memory — text lives in
+    corpus.jsonl and paths/offsets in metadata.json. This zips them
+    back, in corpus order, so unchanged files can be reused without
+    chonkie (and MiniLM rows stay aligned).
+
+    Args:
+        index_dir: Directory that holds a previous BM25 index.
+
+    Returns:
+        Chunks aligned with the saved corpus order (row i = BM25
+        row i).
+
+    Raises:
+        FileNotFoundError: If metadata or corpus is missing.
+        ValueError: If a corpus line is not ``{id, text}``, or the
+            two files disagree on length.
+        KeyError: If a metadata row is missing required keys.
+
+    """
+    metadata_path = Path(index_dir) / "metadata.json"
+    corpus_path = Path(index_dir) / "corpus.jsonl"
+    with metadata_path.open(encoding="utf-8") as f:
+        metadata = json.load(f)
+    texts: list[str] = []
+    with corpus_path.open(encoding="utf-8") as f:
+        for line in f:
+            raw = line.strip()
+            if not raw:
+                # JSONL often ends with a newline; that last read is
+                # empty, not a missing chunk.
+                continue
+            texts.append(_text_from_corpus_line(raw))
+    if len(texts) != len(metadata):
+        msg = (
+            f"corpus.jsonl has {len(texts)} rows but "
+            f"metadata.json has {len(metadata)}"
+        )
+        raise ValueError(msg)
+    chunks: list[ChunkSource] = []
+    # strict=True raises ValueError if the lengths differ.
+    for text, src in zip(texts, metadata, strict=True):
+        chunks.append(
+            ChunkSource(
+                text=text,
+                source=MinimalSource(
+                    file_path=src["file_path"],
+                    first_character_index=src["first_character_index"],
+                    last_character_index=src["last_character_index"],
+                ),
+            ),
+        )
+    return chunks
+
+
+def _text_from_corpus_line(raw: str) -> str:
+    """
+    Read the chunk text from one corpus.jsonl line.
+
+    bm25s writes ``{"id": 0, "text": "…"}``. This is plain JSON, not
+    a Pydantic model (ChunkSource is rebuilt after the zip).
+
+    Args:
+        raw: Stripped JSON line.
+
+    Returns:
+        The ``text`` field.
+
+    Raises:
+        ValueError: If the line is not an object with ``text``.
+
+    """
+    doc = json.loads(raw)
+    if not isinstance(doc, dict) or "text" not in doc:
+        msg = "corpus.jsonl line must be an object with a 'text' field"
+        raise ValueError(msg)
+    return str(doc["text"])
+
+
 def classify_files(
     current_files: list[str],
     manifest: dict[str, Any],
 ) -> tuple[list[str], list[str], list[str], list[str]]:
     """
     Split corpus paths into added, changed, deleted, unchanged.
+
+    This function is called from the collect_chunks_incremental
+    After getting the previous state we check which files changed
+
 
     Args:
         current_files: Paths from get_all_files.

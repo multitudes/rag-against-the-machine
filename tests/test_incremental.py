@@ -13,9 +13,10 @@ from ingestion.incremental import (
     chunk_all_files,
     collect_chunks,
     collect_chunks_incremental,
+    load_chunks_from_index,
     write_file_manifest,
 )
-from ingestion.indexing import create_bm25_index, load_chunks_from_index
+from ingestion.indexing import create_bm25_index
 from retrieval.search import Searcher
 from retrieval.semantic import embeddings_path, merge_semantic_index
 

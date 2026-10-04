@@ -67,7 +67,7 @@ def index_fingerprint(index_dir: str) -> str:
             logger.exception("Could not stat %s", path)
             continue
         parts.append(
-            f"{name}:{int(st.st_mtime_ns)}:{int(st.st_size)}"
+            f"{name}:{int(st.st_mtime_ns)}:{int(st.st_size)}",
         )
     return "|".join(parts)
 

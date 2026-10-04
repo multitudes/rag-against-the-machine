@@ -100,7 +100,7 @@ def handle_search(
             sources = hit
             cached = True
             return 200, _search_body(
-                query, k, semantic, hybrid, cache, cached, sources
+                query, k, semantic, hybrid, cache, cached, sources,
             )
     try:
         searcher = get_cached_searcher(index_dir)
@@ -120,7 +120,7 @@ def handle_search(
     if cache:
         store_query(query, k, index_dir, semantic, hybrid, sources)
     return 200, _search_body(
-        query, k, semantic, hybrid, cache, cached, sources
+        query, k, semantic, hybrid, cache, cached, sources,
     )
 
 
@@ -152,7 +152,7 @@ def handle_answer(
             "error": "Ollama is not running; start it before /answer",
         }
     status, body = handle_search(
-        index_dir, query, k, semantic, hybrid, cache
+        index_dir, query, k, semantic, hybrid, cache,
     )
     if status != 200:
         return status, body
@@ -410,8 +410,8 @@ def _make_handler(index_dir: str) -> type[BaseHTTPRequestHandler]:
             query, k, semantic, hybrid, cache = parsed_args
             self._send(
                 *handle_search(
-                    index_dir, query, k, semantic, hybrid, cache
-                )
+                    index_dir, query, k, semantic, hybrid, cache,
+                ),
             )
 
         def _dispatch_answer(self, data: dict[str, Any]) -> None:
@@ -422,8 +422,8 @@ def _make_handler(index_dir: str) -> type[BaseHTTPRequestHandler]:
             query, k, semantic, hybrid, cache = parsed_args
             self._send(
                 *handle_answer(
-                    index_dir, query, k, semantic, hybrid, cache
-                )
+                    index_dir, query, k, semantic, hybrid, cache,
+                ),
             )
 
         def _read_json(self) -> dict[str, Any] | None:

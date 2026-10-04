@@ -65,7 +65,7 @@ def _print_sources(sources: list[MinimalSource]) -> None:
         print(
             f"{source.file_path} "
             f"[{source.first_character_index}:"
-            f"{source.last_character_index}]"
+            f"{source.last_character_index}]",
         )
 
 
@@ -145,7 +145,6 @@ class RagCLI:
                 logger.warning("No chunks created from files.")
                 return
 
-            Path(index_dir).mkdir(parents=True, exist_ok=True)
             create_bm25_index(result.chunks, index_dir)
             emb_path = embeddings_path(index_dir)
             if result.old_chunks and emb_path.exists():
@@ -352,7 +351,7 @@ class RagCLI:
         try:
             unanswered = UnansweredQuestion(question=query)
             minimal_answer = get_answer(
-                unanswered_question=unanswered, k=k, index_dir=index_dir
+                unanswered_question=unanswered, k=k, index_dir=index_dir,
             )
             final_result = StudentSearchResultsAndAnswer(
                 search_results=[minimal_answer],
@@ -397,7 +396,7 @@ class RagCLI:
         try:
             with Path(student_search_results_path).open(encoding="utf-8") as f:
                 student_results = StudentSearchResults.model_validate_json(
-                    f.read()
+                    f.read(),
                 )
         except Exception:
             logger.exception("Failed to parse search results")
@@ -430,7 +429,7 @@ class RagCLI:
             f.write(final_result.model_dump_json(indent=4))
         print(
             f"Processed {len(minimal_answers)} of {total} questions\n"
-            f"Saved student_search_results_and_answer to {output_path}"
+            f"Saved student_search_results_and_answer to {output_path}",
         )
 
     # ------------------------------------------------------------------
@@ -475,7 +474,7 @@ class RagCLI:
             f"  GET  /health\n"
             f"  GET  /search?query=...&k=5\n"
             f"  POST /search\n"
-            f"  POST /answer"
+            f"  POST /answer",
         )
         try:
             run_server(host, port, index_dir)
@@ -537,7 +536,7 @@ class RagCLI:
             qid = result.question_id
             if qid not in ground_truth_map:
                 logger.warning(
-                    "Question %s not in ground truth. Skipping.", qid
+                    "Question %s not in ground truth. Skipping.", qid,
                 )
                 continue
             gt_sources = ground_truth_map[qid]
@@ -567,7 +566,7 @@ class RagCLI:
         print(
             f"Recall@{k}: {final_recall:.3f} "
             f"({final_recall:.1%}) over "
-            f"{len(quest_recall_scores)} questions"
+            f"{len(quest_recall_scores)} questions",
         )
 
     # ------------------------------------------------------------------

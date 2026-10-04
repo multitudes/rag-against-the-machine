@@ -67,7 +67,7 @@ def test_handle_search_empty_query(tmp_path: Path) -> None:
     """Empty query is HTTP 400."""
     index_dir = _tiny_index(tmp_path)
     status, body = handle_search(
-        str(index_dir), "", 1, False, False, False
+        str(index_dir), "", 1, False, False, False,
     )
     assert status == 400
     assert "query" in body["error"]
@@ -77,7 +77,7 @@ def test_handle_search_returns_sources(tmp_path: Path) -> None:
     """handle_search returns BM25 hits for a tiny corpus."""
     index_dir = _tiny_index(tmp_path)
     status, body = handle_search(
-        str(index_dir), "cats", 1, False, False, False
+        str(index_dir), "cats", 1, False, False, False,
     )
     assert status == 200
     assert body["question"] == "cats"
@@ -91,7 +91,7 @@ def test_handle_search_cache_hit(tmp_path: Path) -> None:
     index_dir = _tiny_index(tmp_path)
     handle_search(str(index_dir), "cats", 1, False, False, True)
     status, body = handle_search(
-        str(index_dir), "cats", 1, False, False, True
+        str(index_dir), "cats", 1, False, False, True,
     )
     assert status == 200
     assert body["cached"] is True
@@ -103,7 +103,7 @@ def test_handle_answer_requires_ollama(tmp_path: Path) -> None:
     index_dir = _tiny_index(tmp_path)
     with patch("api.server.ollama_available", return_value=False):
         status, body = handle_answer(
-            str(index_dir), "cats", 1, False, False, False
+            str(index_dir), "cats", 1, False, False, False,
         )
     assert status == 503
     assert "Ollama" in body["error"]
@@ -132,7 +132,7 @@ def test_handle_answer_mocked_llm(tmp_path: Path) -> None:
         ),
     ):
         status, body = handle_answer(
-            str(index_dir), "cats", 1, False, False, False
+            str(index_dir), "cats", 1, False, False, False,
         )
     assert status == 200
     assert body["answer"] == "cats sit"

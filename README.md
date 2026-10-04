@@ -120,8 +120,7 @@ The index is loaded with `mmap=True` to reduce RAM usage on large corpora.
 
 We manage the project with [uv](https://docs.astral.sh/uv/). Answer
 generation needs [Ollama](https://ollama.com/) with `qwen3:0.6b`.
-Python 3.12 is what we pin locally (`.python-version`); 3.10+ is the
-subject floor.
+Python **3.12+** (`.python-version` and `requires-python`).
 
 ```sh
 # uv, if the machine does not have it yet
@@ -322,10 +321,10 @@ files, images, and architecture-specific blobs. Without an explicit extension bl
 chonkie raises `UnicodeDecodeError`. The solution was to maintain `IGNORE_EXTENSIONS`
 in `chunking.py` and skip those files before attempting to read them.
 
-**macOS / scipy incompatibility:** Python 3.10 scipy wheels ship with a linker section
-(`__thread_bss`) that macOS 27's dynamic linker rejects. Pinning to Python 3.12
-(`.python-version`) resolves this without changing the `requires-python = ">=3.10"`
-constraint for the evaluation Linux machine.
+**macOS / scipy incompatibility:** Python 3.10 scipy wheels ship with a linker
+section (`__thread_bss`) that macOS 27's dynamic linker rejects. We require
+Python 3.12+ (`requires-python` and `.python-version`) so local and
+evaluation machines use a wheel that loads.
 
 **Chunk size vs. recall trade-off:** Larger chunks are faster to index and contain
 more context for the LLM, but risk exceeding the moulinette's 2 000-character hard
