@@ -113,7 +113,7 @@ def _chunk_for_index(
     return files, result
 
 
-def _write_semantic_index(
+def _prepare_for_semantic_index(
     result: ChunkBuildResult,
     semantic: bool,
     index_dir: str,
@@ -229,7 +229,7 @@ class RagCLI:
                 return
 
             create_bm25_index(result.chunks, index_dir)
-            _write_semantic_index(result, semantic, index_dir)
+            _prepare_for_semantic_index(result, semantic, index_dir)
             # fingerprint every time we rewrite BM25. Cheap (stat each path).
             # Read only when --incremental is set.
             write_file_manifest(
@@ -238,7 +238,8 @@ class RagCLI:
                 index_dir,
             )
             # bonus 4 caches search, and we just rewrote the index.
-            # Old cached hits would point at the previous chunks.
+            # Old cached hits would point at the previous chunks
+            # therefore we need to clear now
             clear_index_caches(index_dir)
 
         except Exception:

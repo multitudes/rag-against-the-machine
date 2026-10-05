@@ -268,6 +268,9 @@ class Searcher:
         """
         Perform searches for a list of questions.
 
+        As per subject requirement, it does not need to be semantic or hybrid
+        but only BM25.
+
         Args:
             questions: List of UnansweredQuestion objects.
             k: Number of top results per question.
@@ -294,6 +297,10 @@ class Searcher:
         """
         Read file content for each source in search results.
 
+        Same as retrieve_context_from_sources; kept on Searcher so
+        get_answer can call it on an instance that already loaded BM25.
+        Does not use the index — only file_path and offsets.
+
         Args:
             search_results: MinimalSearchResults with source locations.
 
@@ -301,11 +308,7 @@ class Searcher:
             List of text chunks read from the source files.
 
         """
-        context_chunks = []
-        for source in search_results.retrieved_sources:
-            content = _read_source_text(source)
-            if content is not None:
-                context_chunks.append(content)
+        context_chunks = retrieve_context_from_sources(search_results)
         if not context_chunks:
             logger.error("Could not retrieve any context content.")
         return context_chunks
