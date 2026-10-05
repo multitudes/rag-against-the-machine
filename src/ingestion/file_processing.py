@@ -4,6 +4,10 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
+# ------------------------------------------------------------------
+# Public API
+# ------------------------------------------------------------------
+
 def read_file(file_path: str) -> str:
     """
     Read content from a file handling different encodings.

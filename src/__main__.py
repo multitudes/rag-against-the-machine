@@ -5,16 +5,14 @@ import time
 from pathlib import Path
 
 import fire
-import requests
 from tqdm import tqdm
 
 from answering.answer import answer_from_search_result, get_answer
-from api.server import run_server
+from api.server import ollama_available, run_server
 from core.config import (
     API_DEFAULT_HOST,
     API_DEFAULT_PORT,
     MAX_CHUNK_SIZE,
-    OLLAMA_HEALTH_URL,
 )
 from core.schemas import (
     MinimalSource,
@@ -50,6 +48,10 @@ logging.basicConfig(level=logging.INFO)
 DEFAULT_INDEX_DIR = "data/processed"
 DEFAULT_REPO_PATH = "data/raw/vllm-0.10.1"
 
+
+# ------------------------------------------------------------------
+# Private helpers
+# ------------------------------------------------------------------
 
 def _print_sources(sources: list[MinimalSource]) -> None:
     """
@@ -147,6 +149,10 @@ def _write_semantic_index(
             index_dir,
         )
 
+
+# ------------------------------------------------------------------
+# Public API
+# ------------------------------------------------------------------
 
 class RagCLI:
     """
@@ -414,7 +420,7 @@ class RagCLI:
                 index_dir,
             )
             return
-        if not self._check_ollama():
+        if not ollama_available():
             return
 
         try:
@@ -459,7 +465,7 @@ class RagCLI:
                 student_search_results_path,
             )
             return
-        if not self._check_ollama():
+        if not ollama_available():
             return
 
         try:
@@ -637,29 +643,6 @@ class RagCLI:
             f"({final_recall:.1%}) over "
             f"{len(quest_recall_scores)} questions",
         )
-
-    # ------------------------------------------------------------------
-    # internal helpers
-    # ------------------------------------------------------------------
-
-    def _check_ollama(self) -> bool:
-        """
-        Return True if the Ollama server is reachable, else log an error.
-
-        Returns:
-            True when Ollama responds successfully, False otherwise.
-
-        """
-        try:
-            response = requests.get(OLLAMA_HEALTH_URL, timeout=2)
-            response.raise_for_status()
-        except requests.exceptions.RequestException:
-            logger.exception(
-                "Ollama is not running or not accessible. "
-                "Please start Ollama before running this command.",
-            )
-            return False
-        return True
 
 
 def main() -> None:

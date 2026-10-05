@@ -23,24 +23,10 @@ chunks that either method likes, and boosts chunks that **both** like.
 
 ## Reciprocal Rank Fusion
 
-Each retriever produces an ordered list of chunk ids (best first).
-RRF scores a chunk as:
-
-$$
-\mathrm{score}(d) = \sum_{r \in R} \frac{1}{k_{\mathrm{rrf}} + \mathrm{rank}_r(d)}
-$$
-
-- $R$ is the set of rankings (here: BM25 and MiniLM).
-- $\mathrm{rank}_r(d)$ is 1-based position in that list (missing → skip).
-- $k_{\mathrm{rrf}} = 60$ (standard smoothing; see `RRF_K` in
-  `src/core/config.py`).
-
-A chunk ranked #1 by both lists beats a chunk ranked #1 by only one.
-The fused list is unique ids sorted by this score, truncated to `k`.
-
-Each method is asked for a **pool** of `max(k, HYBRID_POOL)` candidates
-(default pool 20) so RRF can promote items that sat just outside the
-final top-k of one list.
+See [rrf.md](rrf.md) for the formula, a worked example, and
+`rrf_fuse`. Each method is asked for a **pool** of
+`max(k, HYBRID_POOL)` candidates (default 20) so RRF can promote
+items that sat just outside one list’s final top-k.
 
 ---
 

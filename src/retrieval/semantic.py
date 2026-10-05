@@ -22,6 +22,10 @@ from core.schemas import ChunkSource
 logger = logging.getLogger(__name__)
 
 
+# ------------------------------------------------------------------
+# Private helpers
+# ------------------------------------------------------------------
+
 @lru_cache(maxsize=1)
 def _load_model() -> Any:
     """
@@ -37,6 +41,10 @@ def _load_model() -> Any:
     logger.info("Loading embedding model %s on cpu", EMBEDDING_MODEL)
     return SentenceTransformer(EMBEDDING_MODEL, device="cpu")
 
+
+# ------------------------------------------------------------------
+# Public API
+# ------------------------------------------------------------------
 
 def encode_texts(texts: list[str]) -> NDArray[np.float32]:
     """

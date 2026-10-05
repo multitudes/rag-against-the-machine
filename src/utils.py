@@ -15,6 +15,10 @@ from core.schemas import StudentSearchResults, StudentSearchResultsAndAnswer
 logger = logging.getLogger(__name__)
 
 
+# ------------------------------------------------------------------
+# Public API
+# ------------------------------------------------------------------
+
 def write_search_to_file(
     result: StudentSearchResults,
     output_dir: str,

@@ -30,6 +30,10 @@ _INDEX_FINGERPRINT_FILES = (
 _searchers: dict[str, tuple[str, Searcher]] = {}
 
 
+# ------------------------------------------------------------------
+# Public API
+# ------------------------------------------------------------------
+
 def query_cache_path(index_dir: str) -> Path:
     """
     Return the path of the on-disk query cache.
@@ -225,6 +229,10 @@ def store_query(
         return
     logger.debug("Stored query cache entry for %s", query)
 
+
+# ------------------------------------------------------------------
+# Private helpers
+# ------------------------------------------------------------------
 
 def _entry_key(
     query: str,

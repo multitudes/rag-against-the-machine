@@ -17,6 +17,10 @@ logger = logging.getLogger(__name__)
 DEFAULT_INDEX_DIR = "data/processed"
 
 
+# ------------------------------------------------------------------
+# Private helpers
+# ------------------------------------------------------------------
+
 def _read_source_text(source: MinimalSource) -> str | None:
     """
     Read the text span described by a MinimalSource.
@@ -39,6 +43,10 @@ def _read_source_text(source: MinimalSource) -> str | None:
         logger.exception("Error reading file %s", source.file_path)
         return None
 
+
+# ------------------------------------------------------------------
+# Public API
+# ------------------------------------------------------------------
 
 class Searcher:
     """A class to handle loading a BM25 index and perform searches."""

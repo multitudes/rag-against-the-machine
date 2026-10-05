@@ -1,17 +1,20 @@
-"""
-Answer generation module for the RAG system."""
+"""Answer generation module for the RAG system."""
 
 import logging
 
 import requests
 
-from core.config import OLLAMA_API_URL
+from core.config import OLLAMA_API_URL, OLLAMA_GENERATE_TIMEOUT
 from core.ollama_request import Message, OllamaRequest
 from core.schemas import MinimalAnswer, MinimalSearchResults, UnansweredQuestion
 from retrieval.search import Searcher, retrieve_context_from_sources
 
 logger = logging.getLogger(__name__)
 
+
+# ------------------------------------------------------------------
+# Public API
+# ------------------------------------------------------------------
 
 def calling_llm(prompt: str) -> str:
     """
@@ -37,6 +40,7 @@ def calling_llm(prompt: str) -> str:
             OLLAMA_API_URL,
             data=data.model_dump_json(),
             headers={"Content-Type": "application/json"},
+            timeout=OLLAMA_GENERATE_TIMEOUT,
         )
         response.raise_for_status()
         response_data = response.json()

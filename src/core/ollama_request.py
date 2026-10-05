@@ -7,6 +7,10 @@ from typing import Any
 from pydantic import BaseModel
 
 
+# ------------------------------------------------------------------
+# Public API
+# ------------------------------------------------------------------
+
 class Message(BaseModel):
     """
     A single chat message payload.

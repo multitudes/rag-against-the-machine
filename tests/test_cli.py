@@ -5,7 +5,7 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -123,25 +123,6 @@ def test_answer_rejects_empty_query(cli: Any, caplog: Any) -> None:
     """answer returns early on an empty query (no Ollama call)."""
     cli.answer(query="", k=5)
     assert "cannot be empty" in caplog.text
-
-
-def test_check_ollama_success_is_mocked(cli: Any) -> None:
-    """_check_ollama returns True when the health request succeeds."""
-    fake = MagicMock()
-    fake.raise_for_status.return_value = None
-    with patch("requests.get", return_value=fake):
-        assert cli._check_ollama() is True
-
-
-def test_check_ollama_failure_is_mocked(cli: Any) -> None:
-    """_check_ollama returns False when the health request fails."""
-    import requests
-
-    with patch(
-        "requests.get",
-        side_effect=requests.exceptions.ConnectionError(),
-    ):
-        assert cli._check_ollama() is False
 
 
 def test_evaluate_computes_recall(

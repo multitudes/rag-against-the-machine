@@ -255,6 +255,7 @@ path.
 - [sentence-transformers MiniLM](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
 - [retrieving-methods.md](retrieving-methods.md) (TF-IDF vs BM25)
 - [hybrid-retrieval.md](hybrid-retrieval.md) (bonus 2: RRF of BM25 + MiniLM)
+- [rrf.md](rrf.md) (`rrf_fuse`: ranks, not raw scores)
 - [incremental-indexing.md](incremental-indexing.md) (bonus 3: re-chunk changed files)
 - [caching.md](caching.md) (bonus 4: index + query cache)
 - [http-api.md](http-api.md) (bonus 5: local HTTP API)

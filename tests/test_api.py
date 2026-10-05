@@ -6,7 +6,7 @@ import json
 import threading
 from http.server import ThreadingHTTPServer
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -15,6 +15,7 @@ from api.server import (
     handle_answer,
     handle_search,
     health_payload,
+    ollama_available,
 )
 from core.schemas import ChunkSource, MinimalAnswer, MinimalSource
 from ingestion.indexing import create_bm25_index
@@ -96,6 +97,25 @@ def test_handle_search_cache_hit(tmp_path: Path) -> None:
     assert status == 200
     assert body["cached"] is True
     assert body["retrieved_sources"][0]["file_path"] == "a.py"
+
+
+def test_ollama_available_success_is_mocked() -> None:
+    """ollama_available is True when GET /api/tags succeeds."""
+    fake = MagicMock()
+    fake.raise_for_status.return_value = None
+    with patch("api.server.requests.get", return_value=fake):
+        assert ollama_available() is True
+
+
+def test_ollama_available_failure_is_mocked() -> None:
+    """ollama_available is False when the health request fails."""
+    import requests
+
+    with patch(
+        "api.server.requests.get",
+        side_effect=requests.exceptions.ConnectionError(),
+    ):
+        assert ollama_available() is False
 
 
 def test_handle_answer_requires_ollama(tmp_path: Path) -> None:

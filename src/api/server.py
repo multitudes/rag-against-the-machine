@@ -28,6 +28,10 @@ from retrieval.cache import get_cached_searcher, lookup_query, store_query
 logger = logging.getLogger(__name__)
 
 
+# ------------------------------------------------------------------
+# Public API
+# ------------------------------------------------------------------
+
 def ollama_available() -> bool:
     """
     Return True if the local Ollama server responds.
@@ -40,7 +44,10 @@ def ollama_available() -> bool:
         response = requests.get(OLLAMA_HEALTH_URL, timeout=2)
         response.raise_for_status()
     except requests.exceptions.RequestException:
-        logger.exception("Ollama is not running or not accessible.")
+        logger.exception(
+            "Ollama is not running or not accessible. "
+            "Start it before answer / serve /answer.",
+        )
         return False
     return True
 
@@ -205,6 +212,10 @@ def run_server(host: str, port: int, index_dir: str) -> None:
         server.server_close()
 
 
+# ------------------------------------------------------------------
+# Private helpers
+# ------------------------------------------------------------------
+
 def _search_body(
     query: str,
     k: int,
@@ -324,132 +335,176 @@ def _first(
     return values[0]
 
 
+class _RagHandler(BaseHTTPRequestHandler):
+    """
+    Route GET/POST to health, search, and answer.
+
+    ThreadingHTTPServer builds one instance per request as
+    ``Handler(request, client_address, server)``. It does not pass
+    our index path, so ``index_dir`` lives on the class (set by
+    ``_make_handler``).
+
+    """
+
+    index_dir: str = ""
+
+    def log_message(self, fmt: str, *args: Any) -> None:
+        """
+        Send access logs through the project logger.
+
+        Args:
+            fmt: Stdlib log format string.
+            *args: Values for fmt.
+
+        """
+        logger.info("%s - %s", self.address_string(), fmt % args)
+
+    def do_GET(self) -> None:
+        """Handle GET / /health /search /answer."""
+        parsed = urlparse(self.path)
+        route = parsed.path.rstrip("/") or "/"
+        qs = parse_qs(parsed.query)
+        data = {
+            "query": _first(qs, "query") or _first(qs, "q"),
+            "k": _first(qs, "k"),
+            "semantic": _first(qs, "semantic"),
+            "hybrid": _first(qs, "hybrid"),
+            "cache": _first(qs, "cache"),
+        }
+        if route == "/":
+            self._send(
+                200,
+                {
+                    "name": "rage-against-the-machine",
+                    "endpoints": [
+                        "GET /health",
+                        "GET|POST /search",
+                        "GET|POST /answer",
+                    ],
+                },
+            )
+            return
+        if route == "/health":
+            self._send(*health_payload(self.index_dir))
+            return
+        if route == "/search":
+            self._dispatch_search(data)
+            return
+        if route == "/answer":
+            self._dispatch_answer(data)
+            return
+        self._send(404, {"error": "not found"})
+
+    def do_POST(self) -> None:
+        """Handle POST /search and /answer."""
+        parsed = urlparse(self.path)
+        route = parsed.path.rstrip("/") or "/"
+        body = self._read_json()
+        if body is None:
+            self._send(400, {"error": "invalid JSON body"})
+            return
+        if route == "/search":
+            self._dispatch_search(body)
+            return
+        if route == "/answer":
+            self._dispatch_answer(body)
+            return
+        self._send(404, {"error": "not found"})
+
+    def _dispatch_search(self, data: dict[str, Any]) -> None:
+        """
+        Parse args and run /search.
+
+        Args:
+            data: Query-string or JSON fields.
+
+        """
+        parsed_args = _parse_args(data)
+        if isinstance(parsed_args, str):
+            self._send(400, {"error": parsed_args})
+            return
+        query, k, semantic, hybrid, cache = parsed_args
+        self._send(
+            *handle_search(
+                self.index_dir, query, k, semantic, hybrid, cache,
+            ),
+        )
+
+    def _dispatch_answer(self, data: dict[str, Any]) -> None:
+        """
+        Parse args and run /answer.
+
+        Args:
+            data: Query-string or JSON fields.
+
+        """
+        parsed_args = _parse_args(data)
+        if isinstance(parsed_args, str):
+            self._send(400, {"error": parsed_args})
+            return
+        query, k, semantic, hybrid, cache = parsed_args
+        self._send(
+            *handle_answer(
+                self.index_dir, query, k, semantic, hybrid, cache,
+            ),
+        )
+
+    def _read_json(self) -> dict[str, Any] | None:
+        """
+        Read a JSON object from the request body.
+
+        Returns:
+            Parsed dict, empty dict if no body, or None if invalid.
+
+        """
+        length_raw = self.headers.get("Content-Length", "0")
+        try:
+            length = int(length_raw)
+        except ValueError:
+            return None
+        if length <= 0:
+            return {}
+        raw = self.rfile.read(length)
+        try:
+            data = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            logger.exception("Invalid JSON body")
+            return None
+        if not isinstance(data, dict):
+            return None
+        return data
+
+    def _send(self, status: int, body: dict[str, Any]) -> None:
+        """
+        Write a JSON response.
+
+        Args:
+            status: HTTP status code.
+            body: JSON-serialisable payload.
+
+        """
+        payload = json.dumps(body, indent=2).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+
 def _make_handler(index_dir: str) -> type[BaseHTTPRequestHandler]:
     """
-    Build a request handler closed over index_dir.
+    Bind _RagHandler to one index directory.
 
     Args:
         index_dir: BM25 index directory.
 
     Returns:
-        BaseHTTPRequestHandler subclass.
+        A subclass with ``index_dir`` set (so two servers in one
+        process do not share the same path).
 
     """
-
-    class RagHandler(BaseHTTPRequestHandler):
-        """Route GET/POST to health, search, and answer."""
-
-        def log_message(self, fmt: str, *args: Any) -> None:
-            """
-            Send access logs through the project logger.
-
-            Args:
-                fmt: Stdlib log format string.
-                *args: Values for fmt.
-
-            """
-            logger.info("%s - %s", self.address_string(), fmt % args)
-
-        def do_GET(self) -> None:
-            """Handle GET / /health /search /answer."""
-            parsed = urlparse(self.path)
-            route = parsed.path.rstrip("/") or "/"
-            qs = parse_qs(parsed.query)
-            data = {
-                "query": _first(qs, "query") or _first(qs, "q"),
-                "k": _first(qs, "k"),
-                "semantic": _first(qs, "semantic"),
-                "hybrid": _first(qs, "hybrid"),
-                "cache": _first(qs, "cache"),
-            }
-            if route == "/":
-                self._send(
-                    200,
-                    {
-                        "name": "rage-against-the-machine",
-                        "endpoints": [
-                            "GET /health",
-                            "GET|POST /search",
-                            "GET|POST /answer",
-                        ],
-                    },
-                )
-                return
-            if route == "/health":
-                self._send(*health_payload(index_dir))
-                return
-            if route == "/search":
-                self._dispatch_search(data)
-                return
-            if route == "/answer":
-                self._dispatch_answer(data)
-                return
-            self._send(404, {"error": "not found"})
-
-        def do_POST(self) -> None:
-            """Handle POST /search and /answer."""
-            parsed = urlparse(self.path)
-            route = parsed.path.rstrip("/") or "/"
-            body = self._read_json()
-            if body is None:
-                self._send(400, {"error": "invalid JSON body"})
-                return
-            if route == "/search":
-                self._dispatch_search(body)
-                return
-            if route == "/answer":
-                self._dispatch_answer(body)
-                return
-            self._send(404, {"error": "not found"})
-
-        def _dispatch_search(self, data: dict[str, Any]) -> None:
-            parsed_args = _parse_args(data)
-            if isinstance(parsed_args, str):
-                self._send(400, {"error": parsed_args})
-                return
-            query, k, semantic, hybrid, cache = parsed_args
-            self._send(
-                *handle_search(
-                    index_dir, query, k, semantic, hybrid, cache,
-                ),
-            )
-
-        def _dispatch_answer(self, data: dict[str, Any]) -> None:
-            parsed_args = _parse_args(data)
-            if isinstance(parsed_args, str):
-                self._send(400, {"error": parsed_args})
-                return
-            query, k, semantic, hybrid, cache = parsed_args
-            self._send(
-                *handle_answer(
-                    index_dir, query, k, semantic, hybrid, cache,
-                ),
-            )
-
-        def _read_json(self) -> dict[str, Any] | None:
-            length_raw = self.headers.get("Content-Length", "0")
-            try:
-                length = int(length_raw)
-            except ValueError:
-                return None
-            if length <= 0:
-                return {}
-            raw = self.rfile.read(length)
-            try:
-                data = json.loads(raw.decode("utf-8"))
-            except (UnicodeDecodeError, json.JSONDecodeError):
-                logger.exception("Invalid JSON body")
-                return None
-            if not isinstance(data, dict):
-                return None
-            return data
-
-        def _send(self, status: int, body: dict[str, Any]) -> None:
-            payload = json.dumps(body, indent=2).encode("utf-8")
-            self.send_response(status)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(payload)))
-            self.end_headers()
-            self.wfile.write(payload)
-
-    return RagHandler
+    return type(
+        "_BoundRagHandler",
+        (_RagHandler,),
+        {"index_dir": index_dir},
+    )

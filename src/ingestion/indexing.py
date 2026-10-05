@@ -15,6 +15,10 @@ logger = logging.getLogger(__name__)
 DEFAULT_INDEX_DIR = "data/processed"
 
 
+# ------------------------------------------------------------------
+# Public API
+# ------------------------------------------------------------------
+
 def create_bm25_index(
     all_chunks: list[ChunkSource],
     index_dir: str = DEFAULT_INDEX_DIR,

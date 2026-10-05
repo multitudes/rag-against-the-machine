@@ -10,7 +10,10 @@ import uuid
 from pydantic import BaseModel, Field
 
 
-# Core Models
+# ------------------------------------------------------------------
+# Public API
+# ------------------------------------------------------------------
+
 class MinimalSource(BaseModel):
     """
     Represents a minimal source of information.

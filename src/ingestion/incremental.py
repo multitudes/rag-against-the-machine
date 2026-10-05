@@ -24,6 +24,10 @@ from ingestion.chunking import chunk_content
 logger = logging.getLogger(__name__)
 
 
+# ------------------------------------------------------------------
+# Public API
+# ------------------------------------------------------------------
+
 @dataclass
 class ChunkBuildResult:
     """
@@ -43,7 +47,11 @@ class ChunkBuildResult:
     nothing_changed: bool
 
 
-def manifest_path(index_dir: str) -> Path:
+# ------------------------------------------------------------------
+# Private helpers
+# ------------------------------------------------------------------
+
+def _manifest_path(index_dir: str) -> Path:
     """
     Return the path of the per-file fingerprint manifest.
 
@@ -57,7 +65,7 @@ def manifest_path(index_dir: str) -> Path:
     return Path(index_dir) / str(FILES_MANIFEST_FILENAME)
 
 
-def file_fingerprint(path: str) -> dict[str, int] | None:
+def _file_fingerprint(path: str) -> dict[str, int] | None:
     """
     Read size and mtime for one file.
 
@@ -75,6 +83,59 @@ def file_fingerprint(path: str) -> dict[str, int] | None:
         return None
     return {"mtime_ns": int(st.st_mtime_ns), "size": int(st.st_size)}
 
+
+def _load_manifest(index_dir: str) -> dict[str, Any] | None:
+    """
+    Load files.json or return None if it is missing/invalid.
+
+    Args:
+        index_dir: Index directory.
+
+    Returns:
+        Parsed manifest dict, or None.
+
+    """
+    path = _manifest_path(index_dir)
+    if not path.exists():
+        return None
+    try:
+        with path.open(encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        logger.exception("Could not read incremental manifest at %s", path)
+        return None
+    if not isinstance(data, dict):
+        return None
+    return data
+
+
+def _text_from_corpus_line(raw: str) -> str:
+    """
+    Read the chunk text from one corpus.jsonl line.
+
+    bm25s writes ``{"id": 0, "text": "…"}``. This is plain JSON, not
+    a Pydantic model (ChunkSource is rebuilt after the zip).
+
+    Args:
+        raw: Stripped JSON line.
+
+    Returns:
+        The ``text`` field.
+
+    Raises:
+        ValueError: If the line is not an object with ``text``.
+
+    """
+    doc = json.loads(raw)
+    if not isinstance(doc, dict) or "text" not in doc:
+        msg = "corpus.jsonl line must be an object with a 'text' field"
+        raise ValueError(msg)
+    return str(doc["text"])
+
+
+# ------------------------------------------------------------------
+# Public API
+# ------------------------------------------------------------------
 
 def write_file_manifest(
     files: list[str],
@@ -95,14 +156,14 @@ def write_file_manifest(
     """
     files_meta: dict[str, dict[str, int]] = {}
     for file_path in files:
-        fingerprint = file_fingerprint(file_path)
+        fingerprint = _file_fingerprint(file_path)
         if fingerprint is not None:
             files_meta[file_path] = fingerprint
     payload: dict[str, Any] = {
         "max_chunk_size": max_chunk_size,
         "files": files_meta,
     }
-    path = manifest_path(index_dir)
+    path = _manifest_path(index_dir)
     with path.open("w", encoding="utf-8") as f:
         json.dump(payload, f, indent=4)
     logger.info(
@@ -110,31 +171,6 @@ def write_file_manifest(
         len(files_meta),
         path,
     )
-
-
-def _load_manifest(index_dir: str) -> dict[str, Any] | None:
-    """
-    Load files.json or return None if it is missing/invalid.
-
-    Args:
-        index_dir: Index directory.
-
-    Returns:
-        Parsed manifest dict, or None.
-
-    """
-    path = manifest_path(index_dir)
-    if not path.exists():
-        return None
-    try:
-        with path.open(encoding="utf-8") as f:
-            data = json.load(f)
-    except (OSError, json.JSONDecodeError):
-        logger.exception("Could not read incremental manifest at %s", path)
-        return None
-    if not isinstance(data, dict):
-        return None
-    return data
 
 
 def load_chunks_from_index(index_dir: str) -> list[ChunkSource]:
@@ -197,30 +233,6 @@ def load_chunks_from_index(index_dir: str) -> list[ChunkSource]:
     return chunks
 
 
-def _text_from_corpus_line(raw: str) -> str:
-    """
-    Read the chunk text from one corpus.jsonl line.
-
-    bm25s writes ``{"id": 0, "text": "…"}``. This is plain JSON, not
-    a Pydantic model (ChunkSource is rebuilt after the zip).
-
-    Args:
-        raw: Stripped JSON line.
-
-    Returns:
-        The ``text`` field.
-
-    Raises:
-        ValueError: If the line is not an object with ``text``.
-
-    """
-    doc = json.loads(raw)
-    if not isinstance(doc, dict) or "text" not in doc:
-        msg = "corpus.jsonl line must be an object with a 'text' field"
-        raise ValueError(msg)
-    return str(doc["text"])
-
-
 def classify_files(
     current_files: list[str],
     manifest: dict[str, Any],
@@ -252,7 +264,7 @@ def classify_files(
     for path in current_files:
         if path not in fingerprints:
             continue
-        fingerprint = file_fingerprint(path)
+        fingerprint = _file_fingerprint(path)
         if fingerprint is None:
             changed.append(path)
             continue
