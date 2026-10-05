@@ -34,5 +34,6 @@ The two indexes are separate: BM25 is lexical, MiniLM is semantic.
 Hybrid retrieval (bonus 2) merges the two ranked lists. The moulinette
 grades the BM25 path (`search_dataset`).
 
-See also [indexing_workflow.md](indexing_workflow.md) and
-[ingestion.md](ingestion.md).
+See also [indexing_workflow.md](indexing_workflow.md),
+[ingestion.md](ingestion.md), and [bonus.md](bonus.md) (the five
+optional flags).

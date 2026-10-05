@@ -52,6 +52,10 @@ def index_fingerprint(index_dir: str) -> str:
     """
     Build a fingerprint from the index files on disk.
 
+    get_cached_searcher compares two strings (get_cached_searcher).
+    lookup_query includes the string in the dict key so a changed
+    index cannot look up the old hit.
+
     Args:
         index_dir: Directory that holds the BM25 index.
 

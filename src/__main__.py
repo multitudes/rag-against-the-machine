@@ -291,6 +291,7 @@ class RagCLI:
 
         try:
             if cache:
+                # If a hit we dont build a Searcher- It the biggest win
                 cached = lookup_query(
                     query,
                     k,
@@ -301,7 +302,7 @@ class RagCLI:
                 if cached is not None:
                     _print_sources(cached)
                     return
-            if cache:
+                # Skip a second BM25.load.
                 searcher = get_cached_searcher(index_dir)
             else:
                 searcher = Searcher(index_dir=index_dir)
