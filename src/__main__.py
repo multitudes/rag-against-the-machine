@@ -25,6 +25,7 @@ from core.schemas import (
 )
 from ingestion.file_processing import get_all_files
 from ingestion.incremental import (
+    ChunkBuildResult,
     collect_chunks,
     write_file_manifest,
 )
@@ -69,6 +70,84 @@ def _print_sources(sources: list[MinimalSource]) -> None:
         )
 
 
+def _chunk_for_index(
+    repo_path: str,
+    max_chunk_size: int,
+    index_dir: str,
+    incremental: bool,
+) -> tuple[list[str], ChunkBuildResult] | None:
+    """
+    Walk the corpus and produce chunks for BM25.
+
+    result.chunks is always the list to index. result.old_chunks is
+    the previous snapshot only when --incremental loaded it (empty
+    if the flag is off or incremental fell back).
+
+    Args:
+        repo_path: Root of the corpus (data/raw).
+        max_chunk_size: Maximum characters per chunk.
+        index_dir: Previous index directory (incremental baseline).
+        incremental: If True, reuse unchanged files when possible.
+
+    Returns:
+        Corpus paths and a ChunkBuildResult, or None if there is
+        nothing to index. nothing_changed still returns a result so
+        the CLI can print that the index is current.
+
+    """
+    files = get_all_files(repo_path)
+    if not files:
+        logger.warning("No files found to process.")
+        return None
+    result = collect_chunks(
+        files,
+        max_chunk_size,
+        index_dir,
+        incremental,
+    )
+    if not result.nothing_changed and not result.chunks:
+        logger.warning("No chunks created from files.")
+        return None
+    return files, result
+
+
+def _write_semantic_index(
+    result: ChunkBuildResult,
+    semantic: bool,
+    index_dir: str,
+) -> None:
+    """
+    Refresh MiniLM next to the new BM25 index when needed.
+
+    Merge if incremental loaded old_chunks and embeddings.npy already
+    exists (keep row alignment even without --semantic). Otherwise
+    encode every chunk when --semantic is set.
+
+    Args:
+        result: Chunks from _chunk_for_index.
+        semantic: If True, build MiniLM when it is not already there.
+        index_dir: Index directory.
+
+    Returns:
+        None.
+
+    """
+    emb_path = embeddings_path(index_dir)
+    if result.old_chunks and emb_path.exists():
+        merge_semantic_index(
+            result.old_chunks,
+            result.chunks,
+            result.unchanged_files,
+            index_dir,
+        )
+        return
+    if semantic:
+        create_semantic_index(
+            [chunk.text for chunk in result.chunks],
+            index_dir,
+        )
+
+
 class RagCLI:
     """
     CLI for the RAG (Retrieval-Augmented Generation) system.
@@ -91,6 +170,9 @@ class RagCLI:
     ) -> None:
         """
         Ingest data/raw/ and build the BM25 index under data/processed/.
+
+        Walks and chunks the corpus, writes BM25, optionally MiniLM,
+        then files.json for the next --incremental run.
 
         Args:
             max_chunk_size: Maximum characters per chunk (default 2000).
@@ -123,17 +205,15 @@ class RagCLI:
         )
         start_time = time.time()
         try:
-            files_to_process = get_all_files(repo_path)
-            if not files_to_process:
-                logger.warning("No files found to process.")
-                return
-
-            result = collect_chunks(
-                files_to_process,
+            prepared = _chunk_for_index(
+                repo_path,
                 max_chunk_size,
                 index_dir,
                 incremental,
             )
+            if prepared is None:
+                return
+            files_to_process, result = prepared
             if result.nothing_changed:
                 duration = time.time() - start_time
                 print(
@@ -141,29 +221,18 @@ class RagCLI:
                     f"{index_dir} ({duration:.1f}s)",
                 )
                 return
-            if not result.chunks:
-                logger.warning("No chunks created from files.")
-                return
 
             create_bm25_index(result.chunks, index_dir)
-            emb_path = embeddings_path(index_dir)
-            if result.old_chunks and emb_path.exists():
-                merge_semantic_index(
-                    result.old_chunks,
-                    result.chunks,
-                    result.unchanged_files,
-                    index_dir,
-                )
-            elif semantic:
-                create_semantic_index(
-                    [chunk.text for chunk in result.chunks],
-                    index_dir,
-                )
+            _write_semantic_index(result, semantic, index_dir)
+            # fingerprint every time we rewrite BM25. Cheap (stat each path).
+            # Read only when --incremental is set.
             write_file_manifest(
                 files_to_process,
                 max_chunk_size,
                 index_dir,
             )
+            # bonus 4 caches search, and we just rewrote the index.
+            # Old cached hits would point at the previous chunks.
             clear_index_caches(index_dir)
 
         except Exception:
