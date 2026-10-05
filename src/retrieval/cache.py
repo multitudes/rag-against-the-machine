@@ -170,6 +170,7 @@ def lookup_query(
 
     """
     fingerprint = index_fingerprint(index_dir)
+    # the key to our cache is the hash of those 5 things, they all have to match
     key = _entry_key(query, k, semantic, hybrid, fingerprint)
     entries = _load_entries(index_dir)
     raw = entries.get(key)

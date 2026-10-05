@@ -22,23 +22,99 @@ index.
 
 ### Query results (on disk)
 
-Key = SHA-256 of `{query, k, semantic, hybrid, index fingerprint}`.
+`lookup_query` never looks at `_searchers`. It is a **different**
+cache: `query_cache.json` on disk.
 
-Value = the `MinimalSource` list (`file_path` + character offsets).
+`search --cache` does:
 
-The fingerprint is size + mtime of `metadata.json`, `params.index.json`,
-`embeddings.npy`, and `files.json`. After `index` (full or
-incremental) the fingerprint changes, so old hits miss. `index` also
+1. **`lookup_query`** — “did we already print this exact search?” If
+   yes, return sources and **never** construct a Searcher.
+2. On a miss, **`get_cached_searcher`** — that is the dict of live
+   Searchers.
+3. After a real search, **`store_query`** writes the sources under
+   the same key.
+
+The SHA-256 is not “prove this Searcher is still valid.” It is the
+**JSON key** in that file. `_entry_key` hashes
+`{query, k, semantic, hybrid, fp}` because those five things must
+all match or the stored `MinimalSource` list is the wrong answer:
+
+| Change | Same query string, but… |
+|---|---|
+| `k=5` vs `k=10` | Different list length |
+| `--semantic` vs BM25 | Different ranking |
+| `--hybrid` vs not | Different ranking |
+| `fp` after `index` | Chunks / offsets changed |
+
+`fp` is the index fingerprint: size + mtime of `metadata.json`,
+`params.index.json`, `embeddings.npy`, and `files.json`. Baking it
+into the key means a rewrite cannot hit an old entry: the SHA
+changes, `entries.get(key)` is a miss, we search again.
+
+If we keyed only on the query text, “How to stop a worker?” after a
+re-index would still return yesterday’s offsets. `index` also
 deletes `query_cache.json` so the file does not grow stale entries.
+
+Each JSON entry looks like:
+
+```json
+{
+  "entries": {
+    "<sha256>": {
+      "query": "...",
+      "k": 5,
+      "semantic": false,
+      "hybrid": false,
+      "fp": "metadata.json:…|params.index.json:…",
+      "sources": [
+        { "file_path": "...", "start": 0, "end": 80 }
+      ]
+    }
+  }
+}
+```
+
+**Lookup only needs `sources`.** `lookup_query` hashes the current
+`{query, k, semantic, hybrid, fp}`, does `entries.get(key)`, then
+validates `sources`. It never reads `fp` (or `query` / `k` / flags)
+out of the value.
+
+So `fp` in the body is **not required for correctness**. The SHA
+already binds the fingerprint: after `index`, the key changes and
+that entry is unreachable. The extra fields are for humans: the key
+is opaque hex, and opening the file in defence shows *which*
+question, `k`, flags, and index snapshot produced that list. We
+could store `{"sources": [...]}` only and the cache would still
+work.
+
+`get_cached_searcher` uses the same fingerprint as a **string
+compare** (`cached[0] == fingerprint`), not as a SHA. Two jobs, two
+places.
 
 ### Index (in process)
 
-`get_cached_searcher()` keeps one `Searcher` per `index_dir` while the
-fingerprint is unchanged. A cache **miss** on `search --cache` reuses
-that instance instead of calling `BM25.load` again. A one-shot CLI
-process only benefits on the query-file hit (no BM25 load at all). The
-local HTTP API (`serve`, bonus 5) reuses that in-process Searcher
-across requests.
+`_searchers` is `index_dir → (fingerprint, Searcher)`. After we
+construct a `Searcher` on a `--cache` miss, `get_cached_searcher()`
+stores it there. Without `--cache` we still construct one and drop it
+when the process exits — nothing is stored.
+
+Default search uses only `data/processed`, so the dict has **0 or 1**
+entries:
+
+| What you ran | What is in `_searchers` |
+|---|---|
+| `search` (no `--cache`) | Nothing. |
+| `search --cache` **hit** | Still nothing (or whatever was there). We never construct a Searcher. |
+| `search --cache` **miss** | One Searcher, keyed by that folder. |
+
+A second `--cache` miss **in the same process** reuses that object
+instead of `BM25.load` again. `uv run python -m src search …` then
+exit throws the dict away, so the CLI barely benefits from Searcher
+reuse — the query-file hit is what skips the load. `serve` keeps the
+process alive, so that one Searcher stays warm across requests.
+
+Two different `index_dir`s in one process would be two keys. We do
+not do that in the Makefile / defence flow.
 
 ---
 
