@@ -40,14 +40,18 @@ def create_bm25_index(
     # Ensure the output directory exists
     Path(index_dir).mkdir(parents=True, exist_ok=True)
 
-    # Extract the text from each chunk object
+    # We split each ChunkSource into two parallel lists
+    # Extract the text from each chunk object - only these will be tokenized
     corpus = [chunk.text for chunk in all_chunks]
+    # chunk.source is a MinimalSource
     metadata = [chunk.source.model_dump() for chunk in all_chunks]
 
     # --- our code writes metadata.json ---
     # Maps each corpus position → MinimalSource (file_path + char offsets).
     # Needed at search time to turn BM25 hits into moulinette-compatible
     # source locations (bm25s only stores the chunk text, not the path).
+    # Search later gets an integer id, looks up metadata[id],
+    # and that is the moulinette source.
     metadata_path = Path(index_dir) / "metadata.json"
     with Path(metadata_path).open("w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=4)
