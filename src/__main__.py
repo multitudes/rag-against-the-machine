@@ -123,7 +123,9 @@ def _prepare_for_semantic_index(
 
     Merge if incremental loaded old_chunks and embeddings.npy already
     exists (keep row alignment even without --semantic). Otherwise
-    encode every chunk when --semantic is set.
+    encode every chunk when --semantic is set. A full BM25 rebuild
+    without MiniLM deletes a leftover embeddings.npy so later
+    --semantic / --hybrid cannot rank stale rows.
 
     Args:
         result: Chunks from _chunk_for_index.
@@ -148,6 +150,17 @@ def _prepare_for_semantic_index(
             [chunk.text for chunk in result.chunks],
             index_dir,
         )
+        return
+    if emb_path.exists():
+        try:
+            emb_path.unlink()
+        except OSError:
+            logger.exception(
+                "Could not remove stale embeddings at %s",
+                emb_path,
+            )
+            return
+        logger.info("Removed stale embeddings at %s", emb_path)
 
 
 # ------------------------------------------------------------------
@@ -492,6 +505,7 @@ class RagCLI:
                 minimal_answers.append(minimal_answer)
         except Exception:
             logger.exception("Answer generation failed")
+            return
 
         final_result = StudentSearchResultsAndAnswer(
             search_results=minimal_answers,
