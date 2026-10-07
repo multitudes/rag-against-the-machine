@@ -1,5 +1,6 @@
 """Tests for retrieval.search (no network)."""
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -26,6 +27,18 @@ def test_read_source_text_span(text_file: Path) -> None:
         last_character_index=6,
     )
     assert _read_source_text(source) == "cdef"
+
+
+def test_read_source_text_utf8_span(tmp_path: Path) -> None:
+    """Offsets are characters, not bytes (é is two UTF-8 bytes)."""
+    path = tmp_path / "cafe.txt"
+    path.write_text("caféXYZ", encoding="utf-8")
+    source = MinimalSource(
+        file_path=str(path),
+        first_character_index=4,
+        last_character_index=7,
+    )
+    assert _read_source_text(source) == "XYZ"
 
 
 def test_read_source_text_missing_returns_none(tmp_path: Path) -> None:
@@ -59,6 +72,19 @@ def test_searcher_missing_index_dir(tmp_path: Path) -> None:
     """Searcher raises FileNotFoundError when the index is absent."""
     with pytest.raises(FileNotFoundError, match="Index directory"):
         Searcher(index_dir=str(tmp_path / "nope"))
+
+
+def test_searcher_does_not_force_root_debug(tmp_path: Path) -> None:
+    """Searcher leaves the process log level (CLI INFO) unchanged."""
+    root = logging.getLogger()
+    previous = root.level
+    root.setLevel(logging.INFO)
+    try:
+        with pytest.raises(FileNotFoundError):
+            Searcher(index_dir=str(tmp_path / "nope"))
+        assert root.level == logging.INFO
+    finally:
+        root.setLevel(previous)
 
 
 def test_searcher_missing_metadata(tmp_path: Path) -> None:
