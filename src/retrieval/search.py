@@ -33,12 +33,10 @@ def _read_source_text(source: MinimalSource) -> str | None:
 
     """
     try:
-        with Path(source.file_path).open(encoding="utf-8") as f:
-            f.seek(source.first_character_index)
-            length = (
-                source.last_character_index - source.first_character_index
-            )
-            return f.read(length)
+        text = Path(source.file_path).read_text(encoding="utf-8")
+        start = source.first_character_index
+        end = source.last_character_index
+        return text[start:end]
     except Exception:
         logger.exception("Error reading file %s", source.file_path)
         return None
@@ -59,8 +57,6 @@ class Searcher:
             index_dir: Directory where the BM25 index files are stored.
 
         """
-        root_logger = logging.getLogger()
-        root_logger.setLevel(logging.DEBUG)
         logger.debug("Using memory-mapped index (mmap) to reduce memory usage.")
         if not Path(index_dir).exists():
             msg = (
