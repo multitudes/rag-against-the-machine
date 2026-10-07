@@ -63,6 +63,52 @@ Default bind is **127.0.0.1** — this machine only, not a public site.
 
 ---
 
+## Libraries and how the routes are built
+
+No Flask / FastAPI. The server is **stdlib `http.server`**. The only
+extra HTTP library is **`requests`**, and that is the **client** we
+already use for Ollama (`GET /api/tags`, `POST /api/chat`) — not for
+serving.
+
+**What serves**
+
+- `ThreadingHTTPServer` — one process, one thread per request (why
+  the query-cache lock exists).
+- `BaseHTTPRequestHandler` — we subclass it as `_RagHandler` and
+  implement `do_GET` / `do_POST`. There is no router package; we
+  `urlparse` the path and `if route == "/search"`.
+
+CLI is still Fire: `uv run python -m src serve` → `RagCLI.serve` →
+`run_server(host, port, index_dir)`.
+
+**How the APIs are wired**
+
+The stdlib constructor is
+`Handler(request, client_address, server)` — it does not take
+`index_dir`. `_make_handler` builds a **subclass** with `index_dir`
+as a class attribute, then each request uses `self.index_dir`.
+
+Then:
+
+| Path | What runs |
+|---|---|
+| `GET /` | JSON list of routes |
+| `GET /health` | `health_payload` — is `metadata.json` there? |
+| `GET\|POST /search` | parse query-string or JSON → `handle_search` → same `Searcher.search_one` as the CLI |
+| `GET\|POST /answer` | `handle_search` then `answer_from_search_result` (Ollama) |
+
+GET uses `urllib.parse.parse_qs`; POST reads `Content-Length` and
+`json.loads`. Responses are JSON via `_send`.
+
+`serve` calls `get_cached_searcher` once at startup so BM25 is
+already in RAM. Query cache is the same bonus 4 file, behind
+`"cache": true`.
+
+Defence line: **no extra pip package for the API** — `http.server` +
+`json` + `urllib.parse`; `requests` only to talk to Ollama.
+
+---
+
 ## Endpoints
 
 | Method | Path | Role |
@@ -112,8 +158,6 @@ Example response:
 Same fields, plus `"answer": "…"` from Qwen. If Ollama is down the
 status is **503** (`Ollama is not running`). Empty query or bad `k`
 is **400**. Missing index is **503**. Unknown path is **404**.
-
-No extra pip package: stdlib `http.server` only.
 
 ---
 

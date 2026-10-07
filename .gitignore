@@ -232,3 +232,4 @@ bm25s_indices/
 # Subject assets (not part of the submission)
 rag assets/
 .cursor/skills/python-coding-style/SKILL.md
+code_review.md
