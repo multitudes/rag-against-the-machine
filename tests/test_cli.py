@@ -18,6 +18,7 @@ from core.schemas import (
     StudentSearchResults,
     UnansweredQuestion,
 )
+from ingestion.incremental import ChunkBuildResult
 from ingestion.indexing import create_bm25_index
 
 
@@ -181,6 +182,39 @@ def test_answer_dataset_missing_results(
     """answer_dataset returns early without calling Ollama."""
     cli.answer_dataset(str(tmp_path / "missing.json"))
     assert "not found" in caplog.text
+
+
+def test_answer_dataset_stops_on_llm_failure(
+    tmp_path: Path,
+    caplog: Any,
+) -> None:
+    """answer_dataset does not write JSON if generation raises."""
+    module = _load_cli()
+    cli = module.RagCLI()
+    results = StudentSearchResults(
+        search_results=[
+            MinimalSearchResults(
+                question_id="q1",
+                question="what?",
+                retrieved_sources=[],
+            ),
+        ],
+        k=1,
+    )
+    src = tmp_path / "results.json"
+    src.write_text(results.model_dump_json(), encoding="utf-8")
+    out_dir = tmp_path / "out"
+    with (
+        patch.object(module, "ollama_available", return_value=True),
+        patch.object(
+            module,
+            "answer_from_search_result",
+            side_effect=OSError("ollama died"),
+        ),
+    ):
+        cli.answer_dataset(str(src), save_directory=str(out_dir))
+    assert not (out_dir / "results.json").exists()
+    assert "Answer generation failed" in caplog.text
 
 
 def test_search_semantic_without_vectors(
@@ -370,6 +404,58 @@ def test_cli_index_clears_query_cache(
         index_dir=str(index_dir),
     )
     assert not cache_file.exists()
+
+
+def test_prepare_drops_stale_embeddings_on_full_rebuild(
+    tmp_path: Path,
+) -> None:
+    """Full BM25 rebuild without --semantic deletes leftover MiniLM."""
+    module = _load_cli()
+    index_dir = tmp_path / "idx"
+    index_dir.mkdir()
+    leftover = index_dir / "embeddings.npy"
+    leftover.write_bytes(b"stale")
+    result = ChunkBuildResult(
+        chunks=[],
+        old_chunks=[],
+        unchanged_files=set(),
+        nothing_changed=False,
+    )
+    module._prepare_for_semantic_index(result, False, str(index_dir))
+    assert not leftover.exists()
+
+
+def test_prepare_keeps_embeddings_on_incremental_merge(
+    tmp_path: Path,
+) -> None:
+    """Incremental merge without --semantic keeps embeddings.npy."""
+    module = _load_cli()
+    index_dir = tmp_path / "idx"
+    index_dir.mkdir()
+    leftover = index_dir / "embeddings.npy"
+    leftover.write_bytes(b"keep")
+    chunk = ChunkSource(
+        text="hello",
+        source=MinimalSource(
+            file_path="a.py",
+            first_character_index=0,
+            last_character_index=5,
+        ),
+    )
+    result = ChunkBuildResult(
+        chunks=[chunk],
+        old_chunks=[chunk],
+        unchanged_files={"a.py"},
+        nothing_changed=False,
+    )
+    with patch.object(module, "merge_semantic_index") as merge:
+        module._prepare_for_semantic_index(
+            result,
+            False,
+            str(index_dir),
+        )
+    merge.assert_called_once()
+    assert leftover.exists()
 
 
 def test_unanswered_question_used_in_cli() -> None:

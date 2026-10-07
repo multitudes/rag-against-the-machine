@@ -4,7 +4,11 @@ import logging
 
 import requests
 
-from core.config import OLLAMA_API_URL, OLLAMA_GENERATE_TIMEOUT
+from core.config import (
+    DEFAULT_INDEX_DIR,
+    OLLAMA_API_URL,
+    OLLAMA_GENERATE_TIMEOUT,
+)
 from core.ollama_request import Message, OllamaRequest
 from core.schemas import MinimalAnswer, MinimalSearchResults, UnansweredQuestion
 from retrieval.search import Searcher, retrieve_context_from_sources
@@ -24,10 +28,12 @@ def calling_llm(prompt: str) -> str:
         prompt: The full prompt string to send.
 
     Returns:
-        The model's response content, or empty string on failure.
+        The model's response content.
+
+    Raises:
+        Exception: After logging, if the Ollama request or parse fails.
 
     """
-    answer_content = ""
     messages = [Message(role="user", content=prompt)]
     try:
         data = OllamaRequest(
@@ -49,7 +55,7 @@ def calling_llm(prompt: str) -> str:
         return answer_content
     except Exception:
         logger.exception("Could not generate answer")
-        return answer_content
+        raise
 
 
 def create_prompt(context_str: str, question: str) -> str:
@@ -104,7 +110,7 @@ def answer_from_search_result(
 def get_answer(
     unanswered_question: UnansweredQuestion,
     k: int,
-    index_dir: str = "data/processed",
+    index_dir: str = DEFAULT_INDEX_DIR,
 ) -> MinimalAnswer:
     """
     Full single-question pipeline: search → retrieve context → generate answer.

@@ -154,24 +154,3 @@ def test_search_one_and_dataset(tmp_path: Path) -> None:
     assert dataset.k == 2
     assert len(dataset.search_results) == 1
     assert dataset.search_results[0].question_id == "q-cat"
-
-
-def test_retrieve_context_on_searcher(
-    tmp_path: Path,
-    text_file: Path,
-) -> None:
-    """Searcher.retrieve_context reads sources via the helper."""
-    index_dir = _build_index(tmp_path)
-    searcher = Searcher(index_dir=str(index_dir))
-    result = MinimalSearchResults(
-        question_id="q",
-        question="q",
-        retrieved_sources=[
-            MinimalSource(
-                file_path=str(text_file),
-                first_character_index=1,
-                last_character_index=4,
-            ),
-        ],
-    )
-    assert searcher.retrieve_context(result) == ["bcd"]

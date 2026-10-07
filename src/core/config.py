@@ -13,6 +13,9 @@ OLLAMA_GENERATE_TIMEOUT = 120
 # this is rejected and invalidates the entire output file.
 MAX_CHUNK_SIZE = 2000
 
+# Default BM25 / MiniLM index directory (Makefile, CLI, Searcher).
+DEFAULT_INDEX_DIR = "data/processed"
+
 # Bonus 1 — MiniLM vector index stored next to the BM25 files.
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 EMBEDDINGS_FILENAME = "embeddings.npy"

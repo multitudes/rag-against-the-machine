@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,7 @@ _INDEX_FINGERPRINT_FILES = (
 )
 
 _searchers: dict[str, tuple[str, Searcher]] = {}
+_query_cache_lock = threading.Lock()
 
 
 # ------------------------------------------------------------------
@@ -125,11 +127,12 @@ def clear_query_cache(index_dir: str) -> None:
 
     """
     path = query_cache_path(index_dir)
-    try:
-        path.unlink(missing_ok=True)
-    except OSError:
-        logger.exception("Could not remove query cache at %s", path)
-        return
+    with _query_cache_lock:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            logger.exception("Could not remove query cache at %s", path)
+            return
     logger.info("Cleared query cache at %s", path)
 
 
@@ -172,9 +175,12 @@ def lookup_query(
     fingerprint = index_fingerprint(index_dir)
     # the key to our cache is the hash of those 5 things, they all have to match
     key = _entry_key(query, k, semantic, hybrid, fingerprint)
-    entries = _load_entries(index_dir)
-    raw = entries.get(key)
+    with _query_cache_lock:
+        entries = _load_entries(index_dir)
+        raw = entries.get(key)
     if not isinstance(raw, dict):
+        return None
+    if raw.get("fp") != fingerprint:
         return None
     sources_raw = raw.get("sources")
     if not isinstance(sources_raw, list):
@@ -215,23 +221,24 @@ def store_query(
     """
     fingerprint = index_fingerprint(index_dir)
     key = _entry_key(query, k, semantic, hybrid, fingerprint)
-    entries = _load_entries(index_dir)
-    entries[key] = {
-        "query": query,
-        "k": k,
-        "semantic": semantic,
-        "hybrid": hybrid,
-        "fp": fingerprint,
-        "sources": [source.model_dump() for source in sources],
-    }
     path = query_cache_path(index_dir)
-    try:
-        Path(index_dir).mkdir(parents=True, exist_ok=True)
-        with path.open("w", encoding="utf-8") as f:
-            json.dump({"entries": entries}, f, indent=4)
-    except OSError:
-        logger.exception("Could not write query cache at %s", path)
-        return
+    with _query_cache_lock:
+        entries = _load_entries(index_dir)
+        entries[key] = {
+            "query": query,
+            "k": k,
+            "semantic": semantic,
+            "hybrid": hybrid,
+            "fp": fingerprint,
+            "sources": [source.model_dump() for source in sources],
+        }
+        try:
+            Path(index_dir).mkdir(parents=True, exist_ok=True)
+            with path.open("w", encoding="utf-8") as f:
+                json.dump({"entries": entries}, f, indent=4)
+        except OSError:
+            logger.exception("Could not write query cache at %s", path)
+            return
     logger.debug("Stored query cache entry for %s", query)
 
 

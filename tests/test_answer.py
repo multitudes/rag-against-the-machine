@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from answering.answer import (
     answer_from_search_result,
     calling_llm,
@@ -29,13 +31,14 @@ def test_calling_llm_success_is_mocked() -> None:
         assert calling_llm("prompt") == "ok"
 
 
-def test_calling_llm_failure_returns_empty() -> None:
-    """calling_llm returns '' when the request raises."""
+def test_calling_llm_failure_reraises() -> None:
+    """calling_llm logs and re-raises when the request fails."""
     with patch(
         "answering.answer.requests.post",
         side_effect=OSError("offline"),
     ):
-        assert calling_llm("prompt") == ""
+        with pytest.raises(OSError, match="offline"):
+            calling_llm("prompt")
 
 
 def test_answer_from_search_result_mocked(

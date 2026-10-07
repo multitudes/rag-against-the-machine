@@ -7,12 +7,10 @@ from pathlib import Path
 import bm25s
 import Stemmer
 
+from core.config import DEFAULT_INDEX_DIR
 from core.schemas import ChunkSource
 
 logger = logging.getLogger(__name__)
-
-
-DEFAULT_INDEX_DIR = "data/processed"
 
 
 # ------------------------------------------------------------------

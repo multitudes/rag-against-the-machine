@@ -12,6 +12,7 @@ from api.server import ollama_available, run_server
 from core.config import (
     API_DEFAULT_HOST,
     API_DEFAULT_PORT,
+    DEFAULT_INDEX_DIR,
     MAX_CHUNK_SIZE,
 )
 from core.schemas import (
@@ -45,7 +46,6 @@ from utils import calculate_overlap_percentage
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-DEFAULT_INDEX_DIR = "data/processed"
 DEFAULT_REPO_PATH = "data/raw/vllm-0.10.1"
 
 
@@ -387,11 +387,7 @@ class RagCLI:
             ]
 
             searcher = Searcher(index_dir=index_dir)
-            results_list = []
-            for question in tqdm(questions, desc="Searching questions"):
-                res = searcher.search_one(unanswered_question=question, k=k)
-                results_list.append(res)
-            result = StudentSearchResults(search_results=results_list, k=k)
+            result = searcher.search_dataset(questions, k=k)
 
             Path(save_directory).mkdir(parents=True, exist_ok=True)
             output_path = Path(save_directory) / Path(dataset_path).name

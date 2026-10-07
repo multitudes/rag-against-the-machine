@@ -4,7 +4,9 @@ from pathlib import Path
 
 import bm25s
 import Stemmer
+from tqdm import tqdm
 
+from core.config import DEFAULT_INDEX_DIR
 from core.schemas import (
     MinimalSearchResults,
     MinimalSource,
@@ -13,8 +15,6 @@ from core.schemas import (
 )
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_INDEX_DIR = "data/processed"
 
 
 # ------------------------------------------------------------------
@@ -277,7 +277,7 @@ class Searcher:
         """
         logger.debug("Searching the dataset...")
         search_results = []
-        for question in questions:
+        for question in tqdm(questions, desc="Searching questions"):
             result = self.search_one(unanswered_question=question, k=k)
             search_results.append(result)
         logger.debug("Found results for %d questions.", len(search_results))
@@ -285,29 +285,6 @@ class Searcher:
             search_results=search_results,
             k=k,
         )
-
-    def retrieve_context(
-        self,
-        search_results: MinimalSearchResults,
-    ) -> list[str]:
-        """
-        Read file content for each source in search results.
-
-        Same as retrieve_context_from_sources; kept on Searcher so
-        get_answer can call it on an instance that already loaded BM25.
-        Does not use the index — only file_path and offsets.
-
-        Args:
-            search_results: MinimalSearchResults with source locations.
-
-        Returns:
-            List of text chunks read from the source files.
-
-        """
-        context_chunks = retrieve_context_from_sources(search_results)
-        if not context_chunks:
-            logger.error("Could not retrieve any context content.")
-        return context_chunks
 
 
 def retrieve_context_from_sources(

@@ -1,5 +1,7 @@
 """Tests for index / query caching (bonus 4)."""
 
+import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from core.schemas import ChunkSource, MinimalSource
@@ -64,6 +66,62 @@ def test_store_then_lookup_same_query(tmp_path: Path) -> None:
     assert hit is not None
     assert hit[0].file_path == "a.py"
     assert query_cache_path(str(index_dir)).exists()
+
+
+def test_lookup_misses_if_stored_fp_tampered(
+    tmp_path: Path,
+) -> None:
+    """A stored hit whose body fp no longer matches is a miss."""
+    index_dir = _tiny_index(tmp_path)
+    sources = [
+        MinimalSource(
+            file_path="a.py",
+            first_character_index=0,
+            last_character_index=34,
+        ),
+    ]
+    store_query("cats", 1, str(index_dir), False, False, sources)
+    path = query_cache_path(str(index_dir))
+    with path.open(encoding="utf-8") as f:
+        data = json.load(f)
+    for entry in data["entries"].values():
+        entry["fp"] = "tampered"
+    with path.open("w", encoding="utf-8") as f:
+        json.dump(data, f)
+    assert lookup_query("cats", 1, str(index_dir), False, False) is None
+
+
+def test_store_query_concurrent_keeps_both(tmp_path: Path) -> None:
+    """Two threaded stores both survive (API uses ThreadingHTTPServer)."""
+    index_dir = _tiny_index(tmp_path)
+    src_a = [
+        MinimalSource(
+            file_path="a.py",
+            first_character_index=0,
+            last_character_index=34,
+        ),
+    ]
+    src_b = [
+        MinimalSource(
+            file_path="b.py",
+            first_character_index=0,
+            last_character_index=35,
+        ),
+    ]
+
+    def _store_cats() -> None:
+        store_query("cats", 1, str(index_dir), False, False, src_a)
+
+    def _store_dogs() -> None:
+        store_query("dogs", 1, str(index_dir), False, False, src_b)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(_store_cats)
+        second = pool.submit(_store_dogs)
+        first.result()
+        second.result()
+    assert lookup_query("cats", 1, str(index_dir), False, False) is not None
+    assert lookup_query("dogs", 1, str(index_dir), False, False) is not None
 
 
 def test_lookup_misses_on_different_k(tmp_path: Path) -> None:
