@@ -213,6 +213,7 @@ def run_server(host: str, port: int, index_dir: str) -> None:
         (host, port),
         partial(_RagHandler, index_dir),
     )
+
     # When ThreadingHTTPServer binds to a network socket, the underlying
     # socket.socket stores its address metadata in server.server_address.
     # For IPv4 sockets, server_address is a 2-element tuple: ('127.0.0.1', 8000)
@@ -270,6 +271,10 @@ def _as_bool(value: Any, default: bool = False) -> bool:
     """
     Coerce a query/JSON value to bool.
 
+    In Python, bool(string) evaluates to True for any non-empty string
+    prevents this bug by explicitly checking string values instead of 
+    relying on Python truthiness.
+
     Args:
         value: Raw value (bool, str, or None).
         default: Fallback when value is None.
@@ -288,6 +293,9 @@ def _as_bool(value: Any, default: bool = False) -> bool:
 def _as_int(value: Any, default: int) -> int | None:
     """
     Coerce a query/JSON value to int.
+
+    Preventing empty params giving a default.
+    If invalid, yields HTTP 400 Bad Request.
 
     Args:
         value: Raw value.
@@ -316,6 +324,8 @@ def _parse_args(
 
     Returns:
         Parsed tuple, or an error string.
+        Instead of raising a custom exception or returning None,
+        the function uses a string as an error indicator.
 
     """
     query = str(data.get("query") or data.get("q") or "").strip()
@@ -334,6 +344,10 @@ def _first(
 ) -> str | None:
     """
     Return the first query-string value for key.
+
+    _first() is necessary because When you parse a query string
+    with parse_qs, it returns a dictionary where every value
+    is a list of strings, even if a parameter appears only once in the URL.
 
     Args:
         query: parse_qs mapping.
@@ -451,11 +465,16 @@ class _RagHandler(BaseHTTPRequestHandler):
 
         """
         parsed_args = _parse_args(data)
+
+        # because _parse_args() uses a union return type (tuple | str)
+        # and a str is used as an error signal
         if isinstance(parsed_args, str):
             self._send(400, {"error": parsed_args})
             return
         query, k, semantic, hybrid, cache = parsed_args
         self._send(
+            # handle_search() returns a 2-element tuple containing
+            # an integer status code and a dictionary body. The * unpacks
             *handle_search(
                 self.index_dir, query, k, semantic, hybrid, cache,
             ),
