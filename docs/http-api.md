@@ -85,8 +85,10 @@ CLI is still Fire: `uv run python -m src serve` → `RagCLI.serve` →
 
 The stdlib constructor is
 `Handler(request, client_address, server)` — it does not take
-`index_dir`. `_make_handler` builds a **subclass** with `index_dir`
-as a class attribute, then each request uses `self.index_dir`.
+`index_dir`. We pre-bind it with `functools.partial(_RagHandler,
+index_dir)` so `__init__(self, index_dir, request, client_address,
+server)` runs, then `super().__init__` handles the request. Each
+instance has its own `self.index_dir`.
 
 Then:
 
