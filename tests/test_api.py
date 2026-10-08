@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import threading
+from functools import partial
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -11,12 +12,13 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from api.server import (
-    _make_handler,
+    _RagHandler,
     handle_answer,
     handle_search,
     health_payload,
     ollama_available,
 )
+from core.config import OLLAMA_HEALTH_TIMEOUT
 from core.schemas import ChunkSource, MinimalAnswer, MinimalSource
 from ingestion.indexing import create_bm25_index
 
@@ -103,8 +105,9 @@ def test_ollama_available_success_is_mocked() -> None:
     """ollama_available is True when GET /api/tags succeeds."""
     fake = MagicMock()
     fake.raise_for_status.return_value = None
-    with patch("api.server.requests.get", return_value=fake):
+    with patch("api.server.requests.get", return_value=fake) as get:
         assert ollama_available() is True
+    assert get.call_args.kwargs["timeout"] == OLLAMA_HEALTH_TIMEOUT
 
 
 def test_ollama_available_failure_is_mocked() -> None:
@@ -164,7 +167,7 @@ def test_http_server_search_roundtrip(tmp_path: Path) -> None:
     index_dir = _tiny_index(tmp_path)
     server = ThreadingHTTPServer(
         ("127.0.0.1", 0),
-        _make_handler(str(index_dir)),
+        partial(_RagHandler, str(index_dir)),
     )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -201,7 +204,7 @@ def test_http_server_rejects_empty_query(tmp_path: Path) -> None:
     index_dir = _tiny_index(tmp_path)
     server = ThreadingHTTPServer(
         ("127.0.0.1", 0),
-        _make_handler(str(index_dir)),
+        partial(_RagHandler, str(index_dir)),
     )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
