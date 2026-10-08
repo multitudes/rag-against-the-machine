@@ -6,8 +6,9 @@
 
 OLLAMA_API_URL = "http://localhost:11434/api/chat"
 OLLAMA_HEALTH_URL = "http://localhost:11434/api/tags"
-# Generate can be slow on CPU; health checks stay at 2s.
+# Generate can be slow on CPU. Health may wait while a model loads.
 OLLAMA_GENERATE_TIMEOUT = 120
+OLLAMA_HEALTH_TIMEOUT = 10
 
 # Hard limit imposed by the moulinette: any retrieved source longer than
 # this is rejected and invalidates the entire output file.
