@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+from functools import partial
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -17,7 +18,7 @@ from urllib.parse import parse_qs, urlparse
 import requests
 
 from answering.answer import answer_from_search_result
-from core.config import OLLAMA_HEALTH_URL
+from core.config import OLLAMA_HEALTH_TIMEOUT, OLLAMA_HEALTH_URL
 from core.schemas import (
     MinimalSearchResults,
     MinimalSource,
@@ -41,7 +42,12 @@ def ollama_available() -> bool:
 
     """
     try:
-        response = requests.get(OLLAMA_HEALTH_URL, timeout=2)
+        response = requests.get(
+            OLLAMA_HEALTH_URL,
+            timeout=OLLAMA_HEALTH_TIMEOUT,
+        )
+        # checks the HTTP status code of a response and raises an exception
+        # if the request failed.
         response.raise_for_status()
     except requests.exceptions.RequestException:
         logger.exception(
@@ -64,8 +70,10 @@ def health_payload(index_dir: str) -> tuple[int, dict[str, Any]]:
 
     """
     ready = (Path(index_dir) / "metadata.json").exists()
-    return 200, {
-        "status": "ok",
+    status_code = 200 if ready else 503
+
+    return status_code, {
+        "status": "ok" if ready else "degraded",
         "index_dir": index_dir,
         "index_ready": ready,
     }
@@ -167,6 +175,7 @@ def handle_answer(
         MinimalSource.model_validate(item)
         for item in body["retrieved_sources"]
     ]
+    # incoming HTTP request have no question_id
     result = MinimalSearchResults(
         question_id="",
         question=query,
@@ -202,8 +211,13 @@ def run_server(host: str, port: int, index_dir: str) -> None:
     """
     server = ThreadingHTTPServer(
         (host, port),
-        _make_handler(index_dir),
+        partial(_RagHandler, index_dir),
     )
+    # When ThreadingHTTPServer binds to a network socket, the underlying
+    # socket.socket stores its address metadata in server.server_address.
+    # For IPv4 sockets, server_address is a 2-element tuple: ('127.0.0.1', 8000)
+    # Passing 0 as the port argument instructs the OS to assign any unallocated
+    # high-order TCP port, so this solution is more robust
     bound_host, bound_port = server.server_address[:2]
     logger.info("RAG API listening on http://%s:%s", bound_host, bound_port)
     try:
@@ -339,14 +353,31 @@ class _RagHandler(BaseHTTPRequestHandler):
     """
     Route GET/POST to health, search, and answer.
 
-    ThreadingHTTPServer builds one instance per request as
-    ``Handler(request, client_address, server)``. It does not pass
-    our index path, so ``index_dir`` lives on the class (set by
-    ``_make_handler``).
+    ThreadingHTTPServer constructs
+    ``Handler(request, client_address, server)``. We pre-bind
+    ``index_dir`` with ``functools.partial`` so it is the first
+    argument of ``__init__``. The base class handles the request
+    inside ``__init__``, so ``index_dir`` is set before ``super``.
 
     """
 
-    index_dir: str = ""
+    def __init__(
+        self,
+        index_dir: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Bind this request to one index directory.
+
+        Args:
+            index_dir: BM25 index directory.
+            *args: request, client_address, server from HTTPServer.
+            **kwargs: Extra kwargs from the server (unused).
+
+        """
+        self.index_dir = index_dir
+        super().__init__(*args, **kwargs)
 
     def log_message(self, fmt: str, *args: Any) -> None:
         """
@@ -489,22 +520,3 @@ class _RagHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
         self.wfile.write(payload)
-
-
-def _make_handler(index_dir: str) -> type[BaseHTTPRequestHandler]:
-    """
-    Bind _RagHandler to one index directory.
-
-    Args:
-        index_dir: BM25 index directory.
-
-    Returns:
-        A subclass with ``index_dir`` set (so two servers in one
-        process do not share the same path).
-
-    """
-    return type(
-        "_BoundRagHandler",
-        (_RagHandler,),
-        {"index_dir": index_dir},
-    )
