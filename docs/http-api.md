@@ -65,10 +65,7 @@ Default bind is **127.0.0.1** — this machine only, not a public site.
 
 ## Libraries and how the routes are built
 
-No Flask / FastAPI. The server is **stdlib `http.server`**. The only
-extra HTTP library is **`requests`**, and that is the **client** we
-already use for Ollama (`GET /api/tags`, `POST /api/chat`) — not for
-serving.
+The server is **stdlib `http.server`** (not for production but ok for local). The only extra HTTP library is **`requests`**, and that is the **client** we already use for Ollama (`GET /api/tags`, `POST /api/chat`) — not for serving.
 
 **What serves**
 
@@ -163,7 +160,7 @@ is **400**. Missing index is **503**. Unknown path is **404**.
 
 ---
 
-## Defence notes
+## Notes
 
 We `index` (if needed) then `serve`, open
 `http://127.0.0.1:8000/` and `/health` in a browser, `curl` `/search`

@@ -112,7 +112,7 @@
                     "last_character_index": 1956
                 }
             ],
-            "answer": "To evaluate the accuracy of a quantized model using `lm_eval` with vLLM, you can use the following command:\n\n```bash\nlm_eval --model <model_id> --quantization <quantization_type> --output <output_file>\n```\n\nReplace `<model_id>` with the ID of your quantized model and `<quantization_type>` with the type of quantization (e.g., `INT4`, `INT8`, `FP8`). This command will evaluate the accuracy of the model using the lm_eval tool."
+            "answer": "To evaluate the accuracy of a quantized model using `lm_eval` in conjunction with `vLLM`, you can run the following command:\n\n```bash\npython lm-eval --model <your_model_name> --evaluate\n```\n\nThis command evaluates the model's performance in the `lm-eval` framework, which is used for evaluating the quality of the model's outputs. Make sure that the `vLLM` library is properly installed and configured for evaluation."
         },
         {
             "question_id": "5ea5c01a-c953-4477-ae3a-978e20bd73b8",
@@ -169,7 +169,7 @@
                     "last_character_index": 55847
                 }
             ],
-            "answer": "The `LLM` class in vLLM provides the `embed` method for generating embedding vectors from prompts. This method is used to apply the model's embedding capabilities to the input prompts.\n\n### Key Details:\n- **Purpose**: This method is used to generate embedding vectors for the given prompts.\n- **Usage**: It takes the prompts as input and returns a list of `ClassificationRequestOutput` objects, each containing the embedding vectors in the same order as the input prompts.\n- **Supported Tasks**: It supports the `classify` task, which is used for text classification.\n\n### Example Usage:\n```python\nfrom vllm import LLM\n\nllm = LLM(model=\"your_model\", load_format=\"dummy\")\n\n# Example usage\nembeddings = llm.embed(prompts=[\"Hello, my name is\"], use_tqdm=True)\n\nfor embed in embeddings:\n    print(f\"Embedding: {embed.text}\")\n```\n\n### Summary:\nThe `embed` method is the primary method for generating embedding vectors from the input prompts, making it the core functionality for text classification tasks."
+            "answer": "The `LLM` class in vLLM provides the `embed` method to generate embedding vectors from prompts. This method is used for text-to-embeddings inference and automatically batches the prompts to optimize performance based on memory constraints.\n\n### Method: `LLM.embed`\n\n```python\ndef embed(self, prompts):\n    \"\"\"\n    Generate embedding vectors for the given prompts using the model's capabilities.\n\n    Args:\n        prompts: A list of prompts (strings) to generate embeddings for.\n\n    Returns:\n        A list of `ClassificationRequestOutput` objects containing the embedding vectors in the same order as the input prompts.\n    \"\"\"\n    if \"classify\" not in self.supported_tasks:\n        raise ValueError(\n            \"Classification API is not supported by this model. \"\n            \"Try converting the model using `--convert classify`.\"\n        )\n    \n    items = self.encode(\n        prompts,\n        use_tqdm=use_tqdm,\n        pooling_params=pooling_params,\n        lora_request=lora_request,\n        pooling_task=\"classify\",\n    )\n\n    return [ClassificationRequestOutput.from_base(item) for item in items]\n```\n\n### Key Features\n\n- **Embedding Generation**: This method is designed for text-to-embeddings generation.\n- **Batching**: It automatically batches prompts to optimize performance based on memory constraints.\n- **Supports Classification Task**: It is compatible with tasks like classification, where the model generates embeddings for text inputs.\n\nTo use this method, you can pass a list of prompts to it, and it will return the corresponding embedding vectors."
         },
         {
             "question_id": "7c43f334-9999-42b3-935f-11320dc75270",
@@ -226,7 +226,7 @@
                     "last_character_index": 3821
                 }
             ],
-            "answer": "vLLM supports the following hardware platforms:\n\n- **Intel(R) Xeon(R) CPU @ 2.20GHz** (x86_64/aarch64)  \n- **CPU (x86_64/aarch64) 🟡 (MacOS)**  \n- **TPU**  \n- **CPU (x86_64/aarch64)**  \n- **NVIDIA GPU (L4)**\n\nIf you're using a different hardware platform, you can specify the device (e.g., \"neuron\") in the command line or configuration file to enable support for that platform."
+            "answer": "vLLM supports the following hardware platforms:\n\n- **Intel(R) Xeon(R) CPU @ 2.20GHz**\n- **CPU** (x86_64/aarch64, macOS)\n- **TPU**\n- **CPU** (aarch64)\n\nThese are the default supported hardware platforms, and additional hardware platforms can be supported via plugins. For more details, refer to the usage stats collection documentation."
         },
         {
             "question_id": "81e37f26-1203-40ad-a848-764d187d083f",
@@ -283,7 +283,7 @@
                     "last_character_index": 9488
                 }
             ],
-            "answer": "When using the `_call_hf_processor` method in vLLM multimodal processing, the `mm_kwargs` and `tok_kwargs` parameters are used to initialize and call the Hugging Face processor. Here are the differences:\n\n- **`mm_kwargs`**: This is used to both initialize and call the Hugging Face processor. It is used to pass both the processor initialization and the processing parameters.\n- **`tok_kwargs`**: This is used to call the Hugging Face processor, but it is only used if there are token parameters. It is not used for initializations.\n\nThe key difference is that `mm_kwargs` is responsible for both the initialization and the processing, while `tok_kwargs` is only for calling the processor with token parameters."
+            "answer": "When using the `_call_hf_processor` method in vLLM multimodal processing, the `mm_kwargs` and `tok_kwargs` parameters are used for:\n\n- `mm_kwargs`: This is used to initialize and call the Hugging Face processor for both the multimodal input and the multimodal output.\n- `tok_kwargs`: This is used to call the Hugging Face processor for the text tokenization.\n\nThe main difference is that `mm_kwargs` is used for both the multimodal input and the multimodal output, while `tok_kwargs` is used only for the text tokenization. This distinction is important because it affects how the multimodal data is processed and transformed."
         },
         {
             "question_id": "716dd176-b2d7-4613-825a-4ac84b01aab7",
@@ -340,7 +340,7 @@
                     "last_character_index": 3490
                 }
             ],
-            "answer": "You can find information about using generative models in vLLM on the [vLLM documentation page](https://docs.vllm.ai/en/latest/contributing/)."
+            "answer": "You can find information about using generative models in vLLM at the official documentation: [https://docs.vllm.ai](https://docs.vllm.ai/en/latest/contributing)."
         },
         {
             "question_id": "29a0969f-e8f1-44ee-ada8-3824a1f62360",
@@ -397,7 +397,7 @@
                     "last_character_index": 1952
                 }
             ],
-            "answer": "The number of placeholder feature tokens for an image in vLLM's multimodal implementation is calculated as follows:\n\n- For each image, the number of feature placeholders is equal to the number of images in the multimodal input.\n- These feature placeholders are provided as a string, such as `<image>`, and are used to replace the placeholder tokens in the text prompt.\n\nThe implementation uses a placeholder string that is generated based on the number of images, allowing vLLM to handle multimodal inputs with multi-image structures."
+            "answer": "The number of placeholder feature tokens for an image in vLLM's multimodal implementation is calculated using the formula:\n\n$$\n\\text{num_image_tokens} = \\left( \\frac{\\text{image\\_size}}{\\text{patch\\_size}} \\right)^2 + 1\n$$\n\nThis formula accounts for the number of image tokens based on the image size and patch size. If the image has aspect ratios, the calculation may also consider those factors. The placeholder tokens are generated using the number of images and their aspect ratios to determine the appropriate tokenization."
         },
         {
             "question_id": "5fcddb53-d6d0-4ef2-a4bf-b69790561af2",
@@ -454,7 +454,7 @@
                     "last_character_index": 3968
                 }
             ],
-            "answer": "vLLM supports a variety of parallelism strategies for large-scale deployment of Mixture of Experts (MoE) models, including:\n\n1. **Tensor Parallelism (TP)**: Shards model parameters across multiple GPUs within each model layer. This is ideal for large models that are too large to fit on a single GPU.\n2. **Pipeline Parallelism (PP)**: Distributes model layers across multiple GPUs in sequence, suitable for very deep and narrow models.\n3. **Expert Parallelism (EP)**: Enables independent handling of expert layers across multiple GPUs, especially for models like DeepSeek (using MLA) where expert layers may not be fully independent.\n\nThese strategies can be combined to optimize performance across different hardware configurations. For example, combining **TP** and **PP** allows for efficient handling of very large models while maintaining throughput."
+            "answer": "vLLM supports several parallelism strategies for large-scale deployment of Mixture of Experts (MoE) models:\n\n### 1. **Tensor Parallelism (TP)**\n   - **When to use:** When the model is too large to fit on a single GPU, or when you need to reduce memory pressure per GPU to allow more KV cache space for higher throughput.\n   - **How to use:** Specify the number of GPUs (`--tensor-parallel-size`) when splitting model parameters across multiple GPUs.\n\n### 2. **Pipeline Parallelism (PP)**\n   - **When to use:** When you've already maxed out efficient tensor parallelism but need to distribute the model further, or across nodes. This is suitable for very deep and narrow models.\n   - **How to use:** Combine with tensor parallelism for large models: specify both `--tensor-parallel-size` and `--pipeline_parallel_size`.\n\n### 3. **Expert Parallelism (EP)**\n   - **When to use:** When using MoE models, particularly those like DeepSeek that employ MLA (Multi-head Latent Attention), and when you need to handle large DP sizes without a full GPU cluster.\n   - **How to use:** To enable expert parallelism, include the `--enable-expert-parallel` command line option (on all nodes in a multi-node setup).\n\n### 4. **External Load Balancing**\n   - **When to use:** For larger scale deployments, especially with external orchestration and load balancing.\n   - **How to use:** Use separate vLLM deployments with their own endpoints and external routers to balance HTTP requests. This is transparent and works with non-MoE models.\n\nThese strategies help optimize performance by distributing model parameters and expertise across available hardware resources."
         },
         {
             "question_id": "07f706fd-0dcc-4a56-a5ac-cd94ad1c8185",
@@ -511,7 +511,7 @@
                     "last_character_index": 3797
                 }
             ],
-            "answer": "To achieve reproducible results in vLLM, you need to ensure that the random state is consistent across different runs. This can be done by either:\n\n1. For V1: Turn off multiprocessing to make the scheduling deterministic.\n2. For V0: Set the global seed (see below).\n\nThe global seed in V0 is used to set the random states for various random number generators. If a specific seed is provided, the random states for `random`, `np.random`, and `torch.manual_seed` will be set. However, setting the seed can also affect the random state in user code.\n\nIf you are using vLLM in a production environment, you must ensure that the same hardware and vLLM version are used across different runs to achieve reproducibility. Additionally, the online serving API (`vllm serve`) does not support reproducibility due to scheduling constraints in the online setting."
+            "answer": "To achieve reproducible results in vLLM, you need to ensure that the environment is set up consistently. Here's how:\n\n1. **For V1**: Set `VLLM_ENABLE_V1_MULTIPROCESSING=0` to ensure deterministic scheduling by disabling multiprocessing.\n\n2. **For V0**: Set the global seed using the `seed` parameter. If the default is `None`, you need to explicitly set the seed to ensure reproducibility.\n\n3. **Using the `reproducibility.py` example**: This example demonstrates how to implement the settings, ensuring that the random state in user code is set correctly.\n\nBy following these steps, you can ensure that your vLLM model produces consistent results across different runs, even when the same hardware and model are used."
         },
         {
             "question_id": "2afc1d73-f2a8-410f-ac60-e7721be5094b",
@@ -568,7 +568,7 @@
                     "last_character_index": 1553
                 }
             ],
-            "answer": "You can find the setup and installation instructions for vLLM on Google TPU in the official documentation:\n\n- **Google TPU Setup Guide**  \n  [https://cloud.google.com/tpu/docs/setting-up](https://cloud.google.com/tpu/docs/setting-up)\n\n### Key Points from the Documentation\n\n- **TPU Setup**: You can use the **queued resources API** to provision TPUs on Google Cloud. This allows you to request Cloud TPU resources in a queued manner.\n- **VLLM Installation**: You can install vLLM using the **Cloud TPU API** or the **queued resources API**. This enables you to use TPU resources directly.\n- **Use Cases**: vLLM is suitable for applications that require GPU or TPUs, such as:\n  - Training models on TPUs\n  - Training models on GPUs\n  - Running training pipelines on TPUs\n\n### Example Workflow\n\n1. **Provision TPUs**: Use the **queued resources API** to create TPUs:\n   ```bash\n   gcloud alpha compute tpus queued-resources create QUEUED_RESOURCE_ID\n   ```\n\n2. **Install vLLM**: Install vLLM using the Cloud TPU API:\n   ```bash\n   gcloud alpha compute tpus tpu-vm ssh TPU_NAME --project PROJECT_ID --zone ZONE\n   ```\n\n3. **Train Model**: Use the TPU to train your model:\n   ```bash\n   vllm run --model Qwen/Qwen2.5-3B-Instruct --num-loras 100\n   ```\n\nLet me know if you need help with actual TPU provisioning or training!"
+            "answer": "To find the setup and installation instructions for vLLM on Google TPU, follow these steps:\n\n1. **Provision a TPU**: First, ensure that your Google Cloud TPU is already provisioned. You can do this using the **queued resources API** or the **GKE TPUs** API. For instructions, refer to the [Provisioning Guide for TPU with GKE](https://cloud.google.com/kubernetes-engine/docs/how-to/tpus).\n\n2. **Set Up vLLM**: Once your TPU is provisioned, use the vLLM setup guide from the official documentation to configure your environment. This guide will help you install vLLM and set up the necessary dependencies.\n\n3. **Use vLLM with TPU**: After installation, use the vLLM setup to configure your model and run your training with the TPU backend. For more information, refer to the [vLLM Documentation](https://vllm.vlfeat).\n\nLet me know if you need further assistance!"
         },
         {
             "question_id": "b336583e-9dcd-44cc-aa87-a2337f0f2d7d",
@@ -580,14 +580,14 @@
                     "last_character_index": 7314
                 },
                 {
-                    "file_path": "data/raw/vllm-0.10.1/vllm/model_executor/layers/quantization/compressed_tensors/schemes/compressed_tensors_scheme.py",
-                    "first_character_index": 0,
-                    "last_character_index": 1596
-                },
-                {
                     "file_path": "data/raw/vllm-0.10.1/vllm/model_executor/layers/quantization/quark/schemes/quark_scheme.py",
                     "first_character_index": 0,
                     "last_character_index": 1560
+                },
+                {
+                    "file_path": "data/raw/vllm-0.10.1/vllm/model_executor/layers/quantization/compressed_tensors/schemes/compressed_tensors_scheme.py",
+                    "first_character_index": 0,
+                    "last_character_index": 1596
                 },
                 {
                     "file_path": "data/raw/vllm-0.10.1/vllm/model_executor/layers/quantization/quark/schemes/quark_w4a4_mxfp4.py",
@@ -625,7 +625,7 @@
                     "last_character_index": 908
                 }
             ],
-            "answer": "The parameter set by vLLM to support weight quantization in linear layers is `linear_method`. This parameter is set according to different quantization schemes to apply the appropriate quantization steps."
+            "answer": "The parameter that vLLM sets according to different quantization schemes to support weight quantization in linear layers is `linear_method`. This parameter determines how the quantization steps are applied to the linear layers of the model."
         },
         {
             "question_id": "452261bc-6ce4-469e-a9b2-fcddbe26b944",
@@ -682,7 +682,7 @@
                     "last_character_index": 2409
                 }
             ],
-            "answer": "The main configuration object that is passed around in vLLM's class hierarchy is the `PretrainedConfig` class. It is used to store and configure the model settings, such as vocabulary size, hidden size, intermediate size, etc. This configuration is inherited by the `ArcticModel` class and is essential for initializing models in vLLM."
+            "answer": "The main configuration object that is passed around in vLLM's class hierarchy is the `PretrainedConfig` class. It is used to configure the model parameters when initializing the model, defining the model architecture, and controlling the model's behavior."
         },
         {
             "question_id": "48c25d8b-d2f1-4c65-ace8-fcf586a38afb",
@@ -739,7 +739,7 @@
                     "last_character_index": 1791
                 }
             ],
-            "answer": "To build and run a vLLM Docker image for **s390x CPU architecture**, follow these steps:\n\n### 1. Install Dependencies\n\nEnsure you have the necessary tools and packages installed, including:\n- Python\n- Miniconda (for vLLM)\n- Required libraries (`pyarrow`, `torch`, `torchvision`)\n- Build dependencies (e.g., `libgomp`, `libm`, etc.)\n\n```bash\n# Install Miniconda\nwget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh\nbash Miniconda3-latest-Linux-x86_64.sh\nsource ~/.bashrc\n\n# Install vLLM build dependencies\npip install -r requirements/tpu.txt\n```\n\n### 2. Build vLLM Image\n\nUse the following Dockerfile to build the image for s390x CPU architecture.\n\n#### Dockerfile\n\n```dockerfile\nFROM golang:1.19.14.1-alpine AS base\n\n# Add dependencies\nRUN apt-get update && \\\n    apt-get install -y curl build-essential libgomp-dev libm-dev libmilo-dev libmzlib-dev libstdc++-g++ -y\n\n# Install vLLM dependencies\nRUN pip install -r requirements/tpu.txt\n\n# Install required packages\nRUN pip install -r requirements/tpu.txt\n\n# Copy vLLM source\nCOPY vllm /vllm\n\n# Build and install\nRUN pip install -e .\n```\n\n### 3. Build Docker Image\n\nBuild the Docker image with the specified CPU architecture and buildkit support.\n\n```bash\n# Build the Docker image for s390x CPU\ndocker build -f docker/Dockerfile-s390x -t vllm-tpu s390x\n```\n\n### 4. Run the Docker Image\n\nRun the Docker image with the following flags to ensure compatibility:\n\n```bash\n# Build with buildkit and s390x CPU architecture\ndocker run -f --privileged --net host --shm-size=16G -it vllm-tpu s390x\n```\n\n### Notes\n\n- Make sure to replace the image name (`vllm-tpu`) with your desired image name.\n- Ensure the CPU architecture is compatible with the vLLM version you're using.\n- If using ROCm, ensure the build kit is set up correctly with the appropriate ROCm drivers."
+            "answer": "To build and run a vLLM Docker image for the **s390x CPU architecture**, follow these steps:\n\n### 1. Install Required Environment\nEnsure you have:\n- **S390x** CPU architecture support\n- **Linux** (since vLLM is a cross-platform tool)\n- **GCC** and **libtool** (if needed)\n\n### 2. Install Dependencies\nInstall the following packages:\n```bash\nsudo apt-get install -y \\\n    build-essential \\\n    libtool \\\n    libusb-1.0-dev \\\n    libmnl-dev \\\n    libx2hex-dev\n```\n\n### 3. Build vLLM from Source\n1. Clone the vLLM repository:\n   ```bash\n   git clone https://github.com/vllm-project/vllm.git && cd vllm\n   ```\n\n2. Uninstall any existing Python packages:\n   ```bash\n   pip uninstall torch torch-xla -y\n   ```\n\n3. Install build dependencies:\n   ```bash\n   pip install -r requirements/tpu.txt\n   ```\n\n4. Build the Docker image:\n   ```bash\n   VLLM_TARGET_DEVICE=\"s390x\" python setup.py bdist_wheel\n   ```\n\n### 4. Run the Docker Image\nIf you want to run the Docker image with s390x support:\n```bash\ndocker build -f docker/Dockerfile.s390x -t vllm-tpu s390x\n```\n\n### 5. Optional: Run with ROCm\nIf you want to build with ROCm 6.3, use:\n```bash\nDOCKER_BUILDKIT=1 docker build \\\n    -f docker/Dockerfile.rocm -t vllm-tpu\n```\n\n### Summary\n- Use `VLLM_TARGET_DEVICE` set to `s390x` to build with s390x CPU architecture.\n- Ensure all dependencies are installed and the Docker image is built correctly."
         },
         {
             "question_id": "4d0f06a5-e010-4b6a-bc27-35d2c75eb39f",
@@ -796,7 +796,7 @@
                     "last_character_index": 4017
                 }
             ],
-            "answer": "The multimodal model class in vLLM should inherit from the [SupportsMultiModal][vllm.model_executor.models.interfaces.SupportsMultiModal] interface."
+            "answer": "The interface that a multimodal model class should inherit from in vLLM is the [SupportsMultiModal][vllm.model_executor.models.interfaces.SupportsMultiModal] interface. This allows the model to support multi-modal processing and embedding."
         },
         {
             "question_id": "d7e28c25-761b-48a0-ade1-a5e459999fe2",
@@ -853,7 +853,7 @@
                     "last_character_index": 22079
                 }
             ],
-            "answer": "During the **qk_max calculation** in vLLM's paged attention implementation, the **logits array** stores the **masked logits** for each token. Here's how it's stored:\n\n- For each token `token_idx`, we calculate the **partial reduction** to shared memory (`logits[token_idx - start_token_idx]`) and store it.\n- If the token is **masked** (i.e., it's part of a **masked logit**), we set `logits[token_idx - start_token_idx] = 0.0f`.\n- We also update the **maximum value** (`qk_max`) to track the best logit value.\n\n### Summary:\nThe **logits array** stores:\n- The **masked logits** for each token.\n- The **maximum value** (`qk_max`) used to compute the final logits.\n\nSo, the answer is:  \n**The logits array stores the masked logits for each token.**"
+            "answer": "During the qk_max calculation in vLLM's paged attention implementation, the logits array stores the **masked logits** for each token. This is done by setting the `logits[token_idx - start_token_idx]` to 0.0f if the token is masked, and using the `qk` value as the logits for the masked token. This is part of the shared memory during the partial reduction process."
         },
         {
             "question_id": "65078294-e236-4983-b9be-068e8816d9df",
@@ -905,12 +905,12 @@
                     "last_character_index": 1871
                 },
                 {
-                    "file_path": "data/raw/vllm-0.10.1/docs/serving/openai_compatible_server.md",
+                    "file_path": "data/raw/vllm-0.10.1/examples/online_serving/openai_transcription_client.py",
                     "first_character_index": 0,
-                    "last_character_index": 1972
+                    "last_character_index": 1352
                 }
             ],
-            "answer": "To use a **GPTQModel quantized model** with vLLM's Python API, you need to:\n\n1. **Install the necessary packages**: First, install the `gptq` package. You can do this using pip:\n\n   ```bash\n   pip install gptq\n   ```\n\n2. **Import the quantized model**: Once installed, import the quantized model from the vLLM library.\n\n   ```python\n   from vllm import Model, GPTQModel\n   ```\n\n3. **Create a model instance**: Use the `GPTQModel` class to create an instance of your quantized model.\n\n   ```python\n   model = GPTQModel.from_pretrained(\"path/to/your/quantized_model\")\n   ```\n\n4. **Use the model**: Now, you can use this quantized model in your requests by passing it to the appropriate function in your code.\n\n   ```python\n   response = model.generate(\"Your input text here\")\n   print(response)\n   ```\n\n5. **Handle errors**: If there are any issues with quantization, such as incorrect quantization format or invalid quantization, you can handle them in your code.\n\n   ```python\n   try:\n       response = model.generate(\"Your input text here\")\n       print(\"Quantization result:\", response)\n   except Exception as e:\n       print(\"Error:\", e)\n   ```\n\nBy following these steps, you can effectively use GPTQModel quantized models with vLLM's Python API."
+            "answer": "To use GPTQModel quantized models with vLLM's Python API, follow these steps:\n\n1. **Install the GPTQModel quantized model**: \n   - First, install the GPTQModel quantized model using the official documentation. This is done by installing the GPTQModel quantized model from the official repository. \n\n2. **Import the GPTQModel**: \n   - Once the model is installed, import the GPTQModel class from the vllm library. This will allow you to use it in your code.\n\n3. **Configure vLLM's API server**: \n   - Set the API key and base URL in your vLLM configuration. This is typically done by modifying the `openai_api_key` and `openai_api_base` variables in your vLLM configuration file.\n\n4. **Use the GPTQModel quantized model**: \n   - Once the configuration is set, you can use the GPTQModel quantized model in your code. This can be done by creating an instance of the GPTQModel class with the appropriate parameters.\n\n5. **Streaming transcription**: \n   - To perform streaming transcription, you can use the raw HTTP request to the vLLM server. This allows for real-time transcription as the user interacts with the model.\n\nBy following these steps, you can effectively use GPTQModel quantized models with vLLM's Python API."
         },
         {
             "question_id": "a3ee1a66-4718-4f65-a9d9-ca12cc4c876d",
@@ -967,7 +967,7 @@
                     "last_character_index": 2865
                 }
             ],
-            "answer": "To manually set the attention backend in vLLM, you can use the `set_attention_backend` function provided in the `get_attention_backend` method. This function allows you to specify the attention backend class and its implementation for testing purposes.\n\nHere's an example of how to use it:\n\n```python\nfrom openai import OpenAI\nfrom vllm import vllm\n\n# Set up the attention backend\nclass AttentionBackend:\n    def __init__(self, backend_name):\n        self.backend_name = backend_name\n\n    def set_backend(self, backend):\n        self.backend = backend\n\n# Set the attention backend\nbackend = AttentionBackend(\"flash_attn\")\nbackend.set_backend(vllm.v1.attention.backends.flash_attn.FlashAttentionBackend())\n```\n\nThis example sets up the attention backend using the Flash Attention backend class. You can customize the backend name and implementation as needed."
+            "answer": "To manually set the attention backend in vLLM, you can use the `vllm` library's built-in attention backend setup functions. Here's how you can do it:\n\n### Example: Setting the Attention Backend\n\n```python\nfrom vllm import AttentionBackend\n\n# Create a model with the desired attention backend\nmodel = AttentionBackend(\"flash_attn_v1\", model_id=\"llama-3-2-1b\")\n\n# Use the model\ncompletion = model.chat.completions.create(...)\n\n# Output the model ID\nprint(\"Model ID:\", model.id)\n```\n\n### Key Points:\n\n- The attention backend is set using the `AttentionBackend` class provided by the vLLM library.\n- The backend name can be specified as `\"flash_attn_v1\"`, `\"flashinfer_v1\"`, `\"flex_attention\"`, `\"triton_attn\"`, etc.\n- You can override the default backend by specifying the name directly.\n- The implementation details (like how the backend is configured) can be customized as needed.\n\nThis approach allows you to control the attention backend configuration manually, which is useful for debugging or testing scenarios."
         },
         {
             "question_id": "54131f31-356c-476c-a227-ecab17e95978",
@@ -1024,7 +1024,7 @@
                     "last_character_index": 15148
                 }
             ],
-            "answer": "The fastest matrix multiplication kernel in vLLM's torch compile autotuning is **LLMM1**.\n\n### Explanation:\n- **LLMM1** (Linear Matrix-Vector multiplication) is the most efficient matrix multiplication in the vLLM compiler's autotuning for this kind of matrix multiplication.\n- It is designed to handle both **dense matrix multiplication** and **vector-matrix multiplication**, making it ideal for this operation.\n- It is optimized for **CUDA execution**, which allows for better memory reuse and faster computation.\n\n### Why this is the fastest:\n- **Unrolled**: The matrix multiplication is unrolled in a way that maximizes the use of thread and memory, which helps the compiler and compiler optimizations (like **thread unrolling** or **memory reordering**) to optimize the execution.\n- **CUDA-optimized**: The implementation is optimized for **CUDA execution**, which is the standard for high-performance computing.\n\nThis makes **LLMM1** the optimal choice for this specific matrix multiplication operation in vLLM's autotuning."
+            "answer": "The fastest matrix multiplication kernel in vLLM's **torch compile autotuning** for an 8x2048 by 2048x3072 matrix multiplication is **`wvSplitKQ`**.\n\n### Why it's the fastest:\n\n- **Supports FP8 (float32)**: This kernel is optimized for FP8, which is the most efficient for large matrices (since it uses 16-bit precision).\n- **Uses 16-bit precision**: The `wvSplitKQ` kernel uses 16-bit precision, which is the maximum precision supported by the current compiler optimizations.\n- **Handles sparse and interleaved matrix sizes**: It can handle both sparse and interleaved matrix sizes, which makes it suitable for large matrices like 8x2048 × 2048x3072.\n\n### Summary:\nThe fastest matrix multiplication kernel in vLLM's autotuning for this matrix size is `wvSplitKQ`."
         },
         {
             "question_id": "598c5d47-56a5-4cc6-8c01-fab2b02c221d",
@@ -1081,7 +1081,7 @@
                     "last_character_index": 10259
                 }
             ],
-            "answer": "To pass audio inputs to vLLM for multimodal inference, you can use the following approach:\n\n### Step 1: Use the Audio Input Format\n\nWhen you want to pass audio inputs to vLLM, you must use the audio input format. This format is specifically designed for audio processing and is not supported in the standard text input format.\n\n### Step 2: Include Audio in the Prompt\n\nIf you want to include audio in the prompt for multimodal inference, you can do so by adding the audio input placeholder to your prompt. This is typically done by specifying the audio input format in your prompt.\n\n### Example:\n\n```python\n# Example of passing audio inputs to vLLM\naudio_prompt = f\"<|audio|>{prompt}\"\n\n# Example of passing audio and text together\naudio_prompt_with_text = f\"<|audio|>{prompt_with_text}\"\n```\n\n### Explanation:\n\n- The audio input is passed in the format `<|audio|>` as a placeholder.\n- The audio can be combined with text in the same prompt, but only if the audio format is specified.\n\nThis approach allows you to pass audio inputs to vLLM for multimodal inference."
+            "answer": "To pass audio inputs to vLLM for multimodal inference, you can use the `AudioAsset` class from the `vllm.assets.audio` module. Here's how to do it:\n\n1. First, import the `AudioAsset` class from the `vllm.assets.audio` module.\n2. Then, create an instance of the `AudioAsset` class with the audio file path or URL.\n3. Finally, use the audio input in your model's configuration or prompt to pass the audio to the inference process.\n\nExample code:\n\n```python\nfrom vllm import AudioAsset\n\naudio_path = \"path/to/audio.wav\"\n\n# Create an AudioAsset object\naudio_asset = AudioAsset(audio_path)\n\n# Use the audio input in your model\nllm = LLM(model=\"ibm-granite/granite-speech-3.3-2b\")\nllm.enable_lora = True\n# Set the audio asset as part of your model's configuration\n# (You can also pass audio asset in your prompt or during inference)\n```\n\nThis approach allows you to pass audio inputs directly to vLLM for multimodal inference, which is essential for handling audio-based multimodal tasks."
         },
         {
             "question_id": "f17a76af-6ca5-4fee-b80f-8f969e6c2585",
@@ -1138,7 +1138,7 @@
                     "last_character_index": 288
                 }
             ],
-            "answer": "Ray Serve LLM provides the following key capabilities for vLLM deployment:\n\n- **Automatic scaling, back-pressure, and load balancing** across a Ray cluster.\n- **Unified multi-node multi-model deployment**.\n- **Exposes an OpenAI-compatible HTTP API**.\n- **Supports multi-LoRA with shared base models**.\n- **Provides observability and autoscaling policies** through Ray dashboards and metr."
+            "answer": "Ray Serve LLM provides the following key capabilities for vLLM deployment:\n\n- **Automatic scaling, back-pressure, and load balancing** across a Ray cluster.\n- **Unified multi-node multi-model deployment**.\n- **Exposes an OpenAI-compatible HTTP API**.\n- **Multi-LoRA support with shared base models**.\n- **Supports auto-scaling from a single GPU to a multi-node cluster** without code changes.\n- **Provides observability and autoscaling policies** through Ray dashboards and metrics.\n\nThese features make Ray Serve LLM a scalable and production-grade solution for deploying large language models."
         },
         {
             "question_id": "a4aa0cc8-ab95-4c66-af21-77bb9774e4b7",
@@ -1195,7 +1195,7 @@
                     "last_character_index": 11710
                 }
             ],
-            "answer": "To view Nsight Systems profiles in vLLM, you can use vLLM's native profiling tools. Here's how:\n\n1. **Profile the memory usage** of your model using vLLM's built-in profiling tools.\n2. **Interpret the profile** to understand the memory usage and optimize your workload accordingly.\n\nFor more detailed guidance on interpreting these profiles, you can refer to the documentation provided. If you need further assistance, feel free to open an issue with your question."
+            "answer": "You can view **Nsight Systems profiles** in vLLM by using the native profiling tools provided in the vLLM documentation.\n\n### How to View Nsight Systems Profiles in vLLM:\n\n1. **Use vLLM's Native Profiling Tools:**\n   - Visit the following link: [https://docs.vllm.dev/examples/offline_inference/profiling_tpu.md](https://docs.vllm.dev/examples/offline_inference/profiling_tpu.md)\n   - This example provides a way to collect and interpret Nsight Systems profiles.\n\n2. **Profile the Model:**\n   - If you're using vLLM, you can profile your model using the profiling tool directly via the vLLM interface or by using the `memory_profiling` function as described in the vLLM documentation.\n\n3. **Interpret the Profiling:**\n   - Once the profile is collected, you can interpret the results to understand the memory usage and optimize your workload accordingly.\n\nIf you're using vLLM with Ray, you can also profile your model using the `ray` runtime and use the `nsight` configuration settings as described in the [Ray documentation](https://docs.ray.io/)."
         },
         {
             "question_id": "90939e22-7490-40f0-9cad-3cd8173a6c95",
@@ -1252,7 +1252,7 @@
                     "last_character_index": 710
                 }
             ],
-            "answer": "When loading a Quark quantized model in vLLM, the quantization parameter that should be specified is the **quantization algorithm**, such as `quark` or `autosmoothquant`. This parameter is included in the model configuration file and should be specified in the configuration file for the model being quantized."
+            "answer": "When loading a Quark quantized model in vLLM, the quantization parameter that should be specified is `quark`. This parameter is loaded along with the model weights and augment the model with additional information needed for use of that technique."
         },
         {
             "question_id": "74de08d1-3bf7-43de-a74c-1eac844bc063",
@@ -1309,7 +1309,7 @@
                     "last_character_index": 3966
                 }
             ],
-            "answer": "To enable GPUDirect RDMA in vLLM using Docker, you need to use the `VLLM_GPU_DIRECT_RDMA` environment variable. This allows the container to use RDMA for direct memory access, which can improve performance when using GPUs.\n\n### Steps to Enable GPUDirect RDMA in vLLM:\n\n1. **Add the Environment Variable**:\n   Open the Docker run command and add the `VLLM_GPU_DIRECT_RDMA` variable to the Docker arguments.\n\n   ```bash\n   docker run \\\n       -itd \\\n       --network vllm_nginx \\\n       --gpus device=0 \\\n       --shm-size=10.24gb \\\n       -v $hf_cache_dir:/root/.cache/huggingface/ \\\n       -p 8000:8000 \\\n       --env \"VLLM_GPU_DIRECT_RDMA=1\" \\\n       vllm\n   ```\n\n2. **Verify the Environment Variable**:\n   After running the Docker command, check that the environment variable is set to `1`:\n\n   ```bash\n   docker env | grep VLLM_GPU_DIRECT_RDMA\n   ```\n\nThis configuration enables GPUDirect RDMA, which can significantly improve the performance of your vLLM containers when using GPUs."
+            "answer": "To enable GPUDirect RDMA in vLLM using Docker, you can use the `vllm-gpu-direct` flag when running the Docker container. This flag allows the container to use RDMA instead of the host's standard memory.\n\nHere is an example command that uses this flag:\n\n```bash\ndocker run --runtime nvidia --gpus all \\\n    -v ~/.cache/huggingface:/root/.cache/huggingface \\\n    -p 8000:8000 \\\n    --env \"HUGGING_FACE_HUB_TOKEN=$HF_TOKEN\" \\\n    --gpus=direct \\\n    vllm/vllm-openai:latest \\\n    --model Qwen/Qwen3-0.6B\n```\n\nThis flag enables GPUDirect RDMA, allowing the container to use direct memory access for faster data transfer. Make sure that the host system supports RDMA and that the necessary drivers are properly installed for the GPU architecture used."
         },
         {
             "question_id": "d1501d52-b446-4c93-b66e-bea705efbe94",
@@ -1366,7 +1366,7 @@
                     "last_character_index": 7688
                 }
             ],
-            "answer": "To checkout the correct Git commit when installing Triton flash attention for ROCm with vLLM, you should checkout the **`VLLM_USE_TRITON_FLASH_ATTN=0`** environment variable.\n\nHere's the correct Git commit to checkout:\n\n```bash\ngit checkout --tree-include VLLM_USE_TRITON_FLASH_ATTN=0\n```\n\nThis will ensure that your vLLM installation uses the Triton flash attention backend in ROCm mode."
+            "answer": "When installing Triton flash attention for ROCm with vLLM, you should use the following Git commit:\n\n**`git commit -s \"Signed-off by vLLM Contributors\"`**\n\nThis will sign the commit with the DCO and automatically add the `Signed-off-by:` header. Make sure to replace the content inside the commit message with the appropriate information."
         },
         {
             "question_id": "251e3c3f-d368-4e71-85dd-c20013fedebd",
@@ -1423,7 +1423,7 @@
                     "last_character_index": 2318
                 }
             ],
-            "answer": "vLLM's plugin system allows users to extend vLLM with custom features without modifying the vLLM codebase. This system enables plugins to execute in the background, and they are registered through the `entry_points` mechanism in the Python package. The main use cases for plugins include registering custom, out-of-the-tree models and platforms, with plugins being re-entrant functions. The system is designed to work seamlessly with distributed inference and various parallelism techniques."
+            "answer": "The purpose of vLLM's plugin system is to allow users to extend vLLM with custom features without modifying the vLLM codebase. This system enables plugins to be registered as user-registered code that vLLM executes, which is done by the `load_general_plugins` function in the `vllm.plugins` module. Plugins can be used to register custom models or platforms into vLLM, and they work by using the standard Python entry point mechanism."
         },
         {
             "question_id": "d56e34ca-85e9-4199-b4b7-24f6440318f5",
@@ -1480,7 +1480,7 @@
                     "last_character_index": 3170
                 }
             ],
-            "answer": "To check if a model is **natively supported** in vLLM, you can run the following test script:\n\n```python\nfrom vllm import LLM\n\n# For generative models (runner=generate) only\nllm = LLM(model=..., runner=\"generate\")  # Name or path of your model\n\n# For pooling models (runner=pooling) only\nllm = LLM(model=..., runner=\"pooling\")  # Name or path of your model\n\noutput = llm.generate(\"Hello, my name is\")\nprint(output)\n\n# For pooling models\noutput = llm.encode(\"Hello, my name is\")\nprint(output)\n```\n\n### Explanation:\n- If **vLLM** successfully returns text (for generative models) or hidden states (for pooling models), it indicates that your model is **natively supported**.\n- Otherwise, you can refer to [Adding a New Model](../contributing/model/README.md) for instructions on how to implement your model in vLLM."
+            "answer": "To check if a model is **natively supported in vLLM**, you can run the following script:\n\n```python\nfrom vllm import LLM\n\n# For generative models (runner=generate)\nllm = LLM(model=..., runner=\"generate\")\n\noutput = llm.generate(\"Hello, my name is\")\nprint(output)\n\n# For pooling models (runner=pooling)\nllm = LLM(model=..., runner=\"pooling\")\n\noutput = llm.encode(\"Hello, my name is\")\nprint(output)\n```\n\n### How to Use\n\n- **If** the output is text (for generative models), it indicates that your model is **natively supported**.\n- **If** the output is hidden states (for pooling models), it indicates that your model is **supported**.\n\n### Additional Notes\n\n- If vLLM returns text, it means your model is **natively supported**.\n- If it returns hidden states, it means your model is **supported**.\n- You can also check by running the script above.\n\nLet me know if you need any further assistance!"
         },
         {
             "question_id": "4bf223ec-d359-4252-8930-a65db8afcfd1",
@@ -1537,7 +1537,7 @@
                     "last_character_index": 9055
                 }
             ],
-            "answer": "The vLLM supports various backends for structured output generation, including:\n\n- JSON schema (guided_json)\n- regex pattern (guided_regex)\n- JSON schema (guided_json)\n- context-free grammar (guided_grammar)\n- XGrammar benchmark dataset\n\nYou can specify which backend to use by setting the `--guided-decoding-backend` flag to `vllm serve`. The default backend is `auto`, which tries to choose the best one based on the request."
+            "answer": "The supported backends for generating structured outputs in vLLM are:\n\n- `guided_choice`: Choice-based generation\n- `guided_regex`: Regex-based generation\n- `guided_json`: JSON-based generation\n- `guided_grammar`: Context-free grammar-based generation\n\nIf the answer is not in the context, I don't know."
         },
         {
             "question_id": "44c05b2c-beec-474d-ad77-8321c26a29a9",
@@ -1594,7 +1594,7 @@
                     "last_character_index": 15122
                 }
             ],
-            "answer": "The minimum CUDA compiler version required for building cutlass_scaled_mm kernels for **Blackwell SM100** in vLLM is **CUDA 12.8 or later**. This is because Blackwell SM100 kernels require a compiler version that supports CUDA 12.8 or later.\n\nIf you're using a version of CUDA less than 12.8, you will not be able to build those kernels."
+            "answer": "The minimum required CUDA compiler version for building cutlass_scaled_mm kernels for **Blackwell SM100** in vLLM is **CUDA 12.8 or later**. This is specified in the following code:\n\n```cpp\nif(${CMAKE_CUDA_COMPILER_VERSION} VERSION_GREATER_EQUAL 12.8 AND SCALED_MM_ARCHS)\n  set(SRCS \"csrc/quantization/cutlass_w8a8/moe/grouped_mm_c3x_sm100.cu\")\n  set_gencode_flags_for_srcs(\n    SRCS \"${SRCS}\"\n    CUDA_ARCHS \"${SCALED_MM_ARCHS}\")\n  list(APPEND VLLM_EXT_SRC \"${SRCS}\")\n  message(STATUS \"Building grouped_mm_c3x for archs: ${SCALED_MM_ARCHS}\")\n```\n\nThis ensures compatibility with the newer GPU architectures supported by the Blackwell SM100."
         },
         {
             "question_id": "8b40c55a-1e2e-4865-834b-167932a5097f",
@@ -1651,7 +1651,7 @@
                     "last_character_index": 1971
                 }
             ],
-            "answer": "The recommended Python environment manager for vLLM is **Python 3.12**, as it aligns with the CI environment and minimizes compatibility issues. If you're using a different Python version, you'll need to adjust the installation accordingly."
+            "answer": "The recommended Python environment manager for vLLM installation is **pip**, as it is the standard and widely used package manager for Python installations. \n\nHere’s why pip is recommended:\n\n1. **Standard and Widely Used**: Pip is the default Python package manager and is widely used in many development environments.\n\n2. **Package Management**: It is used to install and manage packages like PyTorch, Triton, and other required libraries for vLLM.\n\n3. **Versatility**: It supports a wide range of package management tasks, including installing, updating, and managing dependencies.\n\n4. **CI Integration**: Pip is often used in CI workflows to automate package management and dependency management.\n\nIf you're using a CI system like GitHub Actions or Jenkins, you can set up a Pipfile or similar configuration to manage dependencies and package versions automatically.\n\nFor example, you can create a `Pipfile` in your project directory and define the dependencies and versions in it:\n\n```bash\n# Pipfile\n[dist]\nvllm==1.0.0\n```\n\nThis configuration ensures that vLLM is installed with the correct dependencies and versions in a consistent and automated way."
         },
         {
             "question_id": "22777170-ee96-4628-89f2-2c0e94fd7f20",
@@ -1663,14 +1663,14 @@
                     "last_character_index": 11932
                 },
                 {
-                    "file_path": "data/raw/vllm-0.10.1/examples/online_serving/openai_chat_embedding_client_for_multimodal.py",
-                    "first_character_index": 1044,
-                    "last_character_index": 2755
-                },
-                {
                     "file_path": "data/raw/vllm-0.10.1/docs/serving/openai_compatible_server.md",
                     "first_character_index": 11932,
                     "last_character_index": 13915
+                },
+                {
+                    "file_path": "data/raw/vllm-0.10.1/examples/online_serving/openai_chat_embedding_client_for_multimodal.py",
+                    "first_character_index": 1044,
+                    "last_character_index": 2755
                 },
                 {
                     "file_path": "data/raw/vllm-0.10.1/tests/models/multimodal/pooling/test_dse_qwen2_vl.py",
@@ -1708,7 +1708,7 @@
                     "last_character_index": 7912
                 }
             ],
-            "answer": "The required runner parameter when serving the DSE-Qwen2-MRL model in vLLM is **\"mlp\"**. This parameter is used to specify that the model uses a multi-layer perceptron (MLP) for its structure."
+            "answer": "When serving the DSE-Qwen2-MRL model in vLLM, the required `runner` parameter is `\"ml\"`.\n\nThis parameter is used by the vLLM engine to determine the appropriate model execution strategy, particularly for multi-modal models like Qwen. If the model is designed to be used in a multi-modal context, the `\"ml\"` runner parameter is required."
         },
         {
             "question_id": "87790ff0-09f3-4aa6-8f8e-83180ded4c40",
@@ -1765,7 +1765,7 @@
                     "last_character_index": 1198
                 }
             ],
-            "answer": "The minimum version of bitsandbytes required for vLLM quantization is 0.46.1."
+            "answer": "The minimum version of bitsandbytes required for vLLM quantization is **0.46.1**. This is specified in the context and verified during the test cases."
         },
         {
             "question_id": "31c0d1fa-b91b-4b9e-b616-19476a4485b0",
@@ -1822,7 +1822,7 @@
                     "last_character_index": 24636
                 }
             ],
-            "answer": "To make a vLLM model compatible with both old and new versions of vLLM, you can use the `MyNewModel` class provided in the code above. This class is designed to work with both versions by allowing the model to be initialized with different configuration parameters.\n\n### How to Use:\n\n1. **Import the `MyNewModel` class**: Define a new model class that extends `MyOldModel` in your code. This class should be initialized with the same configuration parameters as the old model.\n\n2. **Initialize with different configurations**: When creating a new model instance, pass the configuration parameters that define the model's behavior in both old and new versions. This way, the model can work with both versions.\n\n### Example Usage:\n\n```python\nfrom vllm.config import VllmConfig\n\nclass MyNewModel(MyOldModel):\n    def __init__(self, *, vllm_config: VllmConfig, prefix: str = \"\"):\n        config = vllm_config.model_config.hf_config\n        cache_config = vllm_config.cache_config\n        quant_config = vllm_config.quant_config\n        lora_config = vllm_config.lora_config\n        super().__init__(config, cache_config, quant_config, lora_config, prefix)\n\n# Initialize the model with old settings\nmodel = MyNewModel(vllm_config=VllmConfig(), prefix=\"\")\n\n# Initialize the model with new settings\nmodel_new = MyNewModel(vllm_config=VllmConfig(), prefix=\"\")\n```\n\n### Explanation:\n\n- The `MyNewModel` class allows the model to be initialized with different configurations, which are compatible with both old and new versions of vLLM.\n- This way, you can create models that work with both versions without needing to change the model weights or configuration parameters significantly."
+            "answer": "To make a vLLM model compatible with both **old and new versions** of vLLM, you can make the following changes:\n\n### 1. **Update the Model Class**\nEnsure the model class is updated to reflect both old and new versions of the vLLM library. This is done by specifying the correct model version in the constructor:\n\n```python\nfrom vllm.config import VllmConfig\n\nclass MyNewModel(MyOldModel):\n    def __init__(self, *, vllm_config: VllmConfig, prefix: str = \"\"):\n        config = vllm_config.model_config.hf_config\n        cache_config = vllm_config.cache_config\n        quant_config = vllm_config.quant_config\n        lora_config = vllm_config.lora_config\n        super().__init__(config, cache_config, quant_config, lora_config, prefix)\n```\n\n### 2. **Change Model Configurations**\nEnsure that the configuration parameters for the model are consistent across both versions. For example, if you're using the new model, make sure that the `model_config` and `quant_config` are set correctly. This ensures that the model can be initialized with both old and new settings.\n\n### 3. **Update the Model Class Logic**\nIf you're working with a specific model, make sure that the logic that initializes the model is compatible with both versions. This includes any changes to the model weights, shard settings, or other configuration parameters.\n\n### 4. **Use the Correct Model Version**\nAlways pass the correct version of the vLLM model to the constructor. This ensures that the model is compatible with both old and new versions of the library.\n\nBy making these adjustments, you can ensure that your vLLM model is compatible with both the old and new versions of the library, allowing it to be used in a variety of environments."
         },
         {
             "question_id": "2d8e04da-8f89-4654-bc2d-118a3aa3512e",
@@ -1879,7 +1879,7 @@
                     "last_character_index": 1667
                 }
             ],
-            "answer": "The Modular Kernel framework in vLLM's FusedMoE implementation is designed to improve performance and enable efficient reuse of precomputed expert information. This approach helps reduce the need to recompute expert information from scratch, thereby optimizing both time and memory usage.\n\nThe key motivations include:\n\n1. **Efficiency**: By reusing previously computed expert information, the FusedMoE implementation reduces the computational overhead associated with recompute from scratch.\n2. **Scalability**: Modular design allows for easier integration and reuse of precomputed expert information across different use cases and model versions.\n3. **Performance**: The Modular Kernel framework enables the efficient execution of FusedMoE operations by leveraging precomputed expert information, which can significantly speed up the overall execution time.\n\nThese features make the FusedMoE implementation both efficient and scalable, supporting a wide range of use cases and hardware."
+            "answer": "The **Modular Kernel framework** in vLLM's FusedMoE implementation is designed to **optimize performance and enable flexible, modular operations**. Here's why:\n\n### Key Motivations:\n\n1. **Modular and Scalable**: \n   - The framework allows for **easy integration of different kernel implementations** without the need to re-implement the entire system from scratch.\n   - This makes the system more **extendable** and easier to **scale** with new features.\n\n2. **Performance Optimization**:\n   - By breaking down complex operations into **separate, reusable kernels**, we can achieve **high performance** with minimal overhead.\n   - This is particularly important in scenarios where large numbers of operations are performed (e.g., long context or high throughput).\n\n3. **Unified Architecture**:\n   - The Modular Kernel allows for **unified handling of all operations** in a single, cohesive design.\n   - This reduces complexity and improves **code reuse** across different parts of the system.\n\n4. **Flexibility**:\n   - The framework supports **different kernel implementations** that can be used in various contexts, making the system highly **robust** and adaptable.\n\n### Summary:\nThe Modular Kernel framework in vLLM's FusedMoE implementation is motivated by the desire for a **flexible, efficient, and scalable system** that can support a wide range of operations and use cases."
         },
         {
             "question_id": "8e131a8f-7466-42a7-bd76-a1bb5f32f988",
@@ -1936,7 +1936,7 @@
                     "last_character_index": 1350
                 }
             ],
-            "answer": "To determine how many inner iterations a warp needs to handle a whole block of value tokens in vLLM's paged attention, we can calculate the number of elements in the block and divide that by the number of elements per warp.\n\n- **Block size**: 16\n- **V_VEC_SIZE**: 8\n- **HEAD_SIZE**: 128\n- **WARP_SIZE**: 32\n\nFirst, calculate the number of value tokens:\n$$ \\text{Number of value tokens} = \\frac{\\text{Block size}}{\\text{V_VEC_SIZE}} = \\frac{16}{8} = 2 $$\n\nNext, divide by the number of elements per warp:\n$$ \\frac{2}{32} = \\frac{1}{16} $$\n\nSo, a warp needs to handle approximately $ \\frac{1}{16} $ of a value token block. Therefore, the number of inner iterations required is $ \\frac{1}{16} $, or approximately 0.0625."
+            "answer": "To determine how many inner iterations a warp needs to handle a whole block of value tokens in vLLM's paged attention, we need to compute how many **tokens** (or **value tokens**) would be in a single block, divided by the block size, and then take that number as the **number of inner iterations** per warp.\n\n### Given:\n- **BLOCK_SIZE = 16**\n- **V_VEC_SIZE = 8**\n- **HEAD_SIZE = 128**\n- **WARP_SIZE = 32**\n\n### Step-by-step calculation:\n\n1. **Calculate the number of value tokens in a single block**:\n   $$\n   \\text{Number of value tokens in a block} = \\frac{\\text{block size}}{\\text{V_VEC_SIZE}} = \\frac{16}{8} = 2\n   $$\n\n2. **Divide this number by the number of inner iterations per warp**:\n   $$\n   \\text{Number of inner iterations per warp} = \\frac{2}{32} = 0.0625\n   $$\n\n### Final Answer:\nA warp needs **0 inner iterations** to handle a whole block of value tokens in vLLM's paged attention."
         },
         {
             "question_id": "2fca0ee8-4ffa-4d5a-a15d-cce139f08f38",
@@ -1993,7 +1993,7 @@
                     "last_character_index": 1944
                 }
             ],
-            "answer": "The endpoint used to expose production metrics by vLLM is **/v1/metrics**. This endpoint is part of the vLLM API and provides the necessary metrics for monitoring and management."
+            "answer": "The endpoint that vLLM uses to expose production metrics is:\n\n- **/v1/rerank**\n\nThis endpoint is used for reranking and is part of vLLM's internal metrics system. It is also used by the Prometheus and Grafana dashboards to expose metrics."
         },
         {
             "question_id": "2a165588-2d3d-4d50-9516-0efa08fd7900",
@@ -2050,7 +2050,7 @@
                     "last_character_index": 1971
                 }
             ],
-            "answer": "To build and install vLLM from source for AWS Neuron, follow these steps:\n\n### 1. **Install Required Tools**\n- **CMake**: Ensure CMake is installed in your system. You can install it using the package manager, such as on Linux:\n  ```bash\n  sudo apt install cmake\n  ```\n\n### 2. **Install Dependencies**\n- **Python**: Install Python from source (editable mode) to avoid recompiling from source every time.\n- **CUDA Toolkit**: Ensure NVIDIA CUDA Toolkit is properly installed. You can install it via the official NVIDIA documentation or via your system’s package manager.\n- **Build Dependencies**: Install the required dependencies, including CUDA and CMake, to ensure your build environment is properly set up.\n\n### 3. **Build vLLM**\n- **Install Python**: If you're using a Python environment, ensure you're in an editable mode:\n  ```bash\n  uv venv --python 3.12 --seed\n  source .venv/bin/activate\n  VLLM_USE_PRECOMPILED=1 uv pip install -U -e . --torch-backend=auto\n  ```\n\n### 4. **Install Additional Packages**\n- **CUDA and CMake**: Install CUDA and CMake to compile your code, which is required for CUDA kernels.\n\n### 5. **Build vLLM**\n- Run the following commands to build and install vLLM from source:\n  ```bash\n  uv pip install -r requirements/cpu.txt\n  uv pip install -e .\n  ```\n\n### 6. **Optional: Build with CMake**\n- If you want to use CMake for compilation, ensure your environment is set up with CMake, CUDA, and other build tools. This can speed up your workflow.\n\nBy following these steps, you should be able to build and install vLLM from source for AWS Neuron efficiently."
+            "answer": "To build and install vLLM from source for AWS Neuron (a GPU-based deployment environment), follow the steps below:\n\n### 1. **Install Required Dependencies**\nBefore building vLLM, ensure you have the necessary tools and dependencies installed:\n\n- **Python**: Ensure you have Python installed and set up to use vLLM.\n- **CUDA Toolkit**: Make sure you have the correct NVIDIA CUDA Toolkit installed and that `nvcc` is in your `PATH`.\n- **Build Tools**: Install `ccache` to speed up compilation.\n\n### 2. **Install Required Packages**\nUse the package manager to install the required packages:\n\n```bash\n# Install CUDA toolkit and ccache\nsudo apt install -y cuda-toolkit && sudo apt install -y ccache\n\n# Install Python and necessary packages\nuv pip install -r requirements/build.txt --torch-backend=auto\n```\n\n### 3. **Build vLLM from Source**\nOnce the dependencies are installed, run the following commands to build and install vLLM:\n\n```bash\n# Clone vLLM repository\ngit clone https://github.com/vllm-project/vllm.git\n\n# Build vLLM from source\nuv pip install -r requirements/build.txt --torch-backend=auto\n\n# Build and install vLLM\nuv pip install -e . && \\\n    VLLM_USE_PRECOMPILED=1 uv pip install -r requirements-build.txt && \\\n    python setup.py bdist_wheel\n```\n\n### 4. **Verify Installation**\nAfter installation, verify that vLLM is correctly installed and running:\n\n```bash\n# Check Python environment\npython --version\n\n# Check CUDA version\nnvidia-smi -v\n```\n\nThese steps will help you build and install vLLM from source for AWS Neuron, ensuring compatibility and optimal performance."
         },
         {
             "question_id": "3aff1593-e6cf-45ab-8cba-8858d3f98b06",
@@ -2107,7 +2107,7 @@
                     "last_character_index": 450
                 }
             ],
-            "answer": "The two main reasons for using disaggregated prefilling in vLLM are:\n\n1. **Tuning time-to-first-token (TTFT) and inter-token-latency (ITL) separately**. Disaggregated prefilling allows for parallel strategies like `tp` and `pp` to be tuned without affecting ITL, or to tune ITL without affecting TTFT.\n\n2. **Controlling tail ITL**. Disaggregated prefilling helps manage tail latency by avoiding prefill jobs that occur during the decoding of one request, which can increase the tail latency. This is achieved by isolating the prefill and decode phases in different vLLM instances."
+            "answer": "The two main reasons for using disaggregated prefilling in vLLM are:\n\n1. **Tuning time-to-first-token (TTFT) and inter-token-latency (ITL) separately**: Disaggregated prefilling allows you to assign different parallel strategies (e.g., `tp` and `pp`) for tuning TTFT without affecting ITL, or to tune ITL without affecting TTFT.\n\n2. **Controlling tail ITL**: Disaggregated prefilling helps you solve tail ITL by controlling the number of prefill jobs inserted during decoding, which can lead to better performance and reduce latency."
         },
         {
             "question_id": "b8006621-c08c-4ada-a80b-586fc3e5b4e9",
@@ -2221,7 +2221,7 @@
                     "last_character_index": 1929
                 }
             ],
-            "answer": "To configure default multimodal LoRAs (Large Representation of Inputs) when starting the vLLM server, you can define the `--default-multimodal-loras` parameter when launching the server. This parameter allows you to set the default multimodal LoRAs for the model.\n\nFor example, you can run the following command to set the default multimodal LoRAs:\n\n```bash\nvllm serve NousResearch/Meta-Llama-3-8B-Instruct \\\n  --dtype auto \\\n  --default-multimodal-loras=2\n```\n\nThis parameter will set the default multimodal LoRAs for the model, allowing you to customize the model's behavior as needed."
+            "answer": "To configure default multimodal LoRAs (Large Reasoning Assemblies) when starting the vLLM server, you need to specify the configuration parameters when launching the server. The configuration file can be found in the `vllm` directory, and you can modify the parameters in the configuration file to set the desired multimodal LoRAs.\n\nHere's how you can do it:\n\n1. **Locate the Configuration File**: The configuration file for vLLM is typically in the `vllm` directory. The file name is usually something like `config/config.yaml` or similar.\n\n2. **Modify the Configuration File**: Open the configuration file and locate the parameters that define the multimodal LoRAs. These parameters are usually under the `llm` or `model` section.\n\n3. **Set the Multimodal LoRAs**: In the configuration file, set the parameters for multimodal LoRAs. For example, you can set the `llm` parameter to define the model and specify the multimodal LoRAs.\n\n4. **Launch the Server**: Once the configuration is set, run the vLLM server with the updated configuration file.\n\nBy following these steps, you can configure the default multimodal LoRAs when starting the vLLM server."
         },
         {
             "question_id": "10f95271-664c-4fc9-b63c-bbb17fe10150",
@@ -2278,7 +2278,7 @@
                     "last_character_index": 5317
                 }
             ],
-            "answer": "To extract reasoning content from a model-generated string in vLLM, you need to specify the `--reasoning-parser` flag. This flag allows you to select a reasoning parser that will be used to extract the reasoning content from the model's output."
+            "answer": "To extract reasoning content from a model, you need to specify the `--reasoning-parser` flag when serving the model in vLLM. This flag allows you to enable the extraction of reasoning content from the model output."
         },
         {
             "question_id": "e3f2374c-9598-469e-bdae-a2f0962044e2",
@@ -2392,7 +2392,7 @@
                     "last_character_index": 1671
                 }
             ],
-            "answer": "The Llama family of models (like Llama-2, Llama-3, etc.) supports tensor parallelism in vLLM.\n\n### Supported Model Architectures for Tensor Parallelism in vLLM\n\n- **Llama-2**: Supports tensor parallelism.\n- **Llama-3**: Also supports tensor parallelism.\n- **Llama-4**: Similarly supports tensor parallelism.\n\nThese models are part of the Llama family and are designed with tensor parallelism in mind for efficient inference across multiple GPUs."
+            "answer": "The Llama family of models supports tensor parallelism in vLLM. Specifically, the following architectures are supported:\n\n- **Llama-2.5-VL-3B-Instruct**\n- **Llama-3-8B-Instruct**\n\nThese models use tensor parallelism by default when running in the vLLM framework. If you want to enable expert parallelism (which is enabled by setting `enable_expert_parallel=True`), you can do so for these models as well."
         },
         {
             "question_id": "860c7aac-6520-413c-ac98-19448b34472a",
@@ -2449,7 +2449,7 @@
                     "last_character_index": 3798
                 }
             ],
-            "answer": "The method that needs to be overridden in `BaseProcessingInfo` to specify the maximum number of input items for each modality in vLLM multimodal models is `get_supported_mm_limits`. This method returns the maximum number of input items for each modality supported by the model. If `None` is returned, it means the model supports unlimited number of items."
+            "answer": "The method that needs to be overridden in `BaseProcessingInfo` to specify the maximum number of input items for each modality in vLLM multimodal models is `get_supported_mm_limits`. This method should return a dictionary where each key represents a modality, and the value is the maximum number of input items for that modality. If a modality is not supported, its value should be `None`."
         },
         {
             "question_id": "2a297df9-dacc-442c-899b-6416078fb451",
@@ -2506,7 +2506,7 @@
                     "last_character_index": 1980
                 }
             ],
-            "answer": "The system requirements for running vLLM with Intel Gaudi devices are as follows:\n\n- **OS**: Linux\n- **Python**: 3.9 -- 3.12\n- **GPU**: Intel Gaudi is not supported with Windows natively. However, you can use the Intel XPU platform by installing the corresponding Intel extension for PyTorch, as required by the vLLM CI/CD setup.\n\nFor Intel Gaudi devices, you can follow the instructions provided in the documentation for the specific Intel XPU platform to ensure compatibility."
+            "answer": "The system requirements for running vLLM with Intel Gaudi devices are as follows:\n\n- **Operating System**: Linux (the default for vLLM)\n- **Python**: Must be 3.9 or later\n- **Intel Gaudi**: This is a specific hardware platform that supports certain types of quantization and parallelization features. For optimal performance, ensure that the appropriate Intel Gaudi driver is installed and properly configured on your system.\n\nIf you are using an Intel Gaudi GPU, you may need to install the corresponding Intel XPU extension for PyTorch, as well as the Intel Gaudi library. The Intel Gaudi documentation provides information on how to install and configure this hardware."
         },
         {
             "question_id": "67d28a0f-661d-4707-8982-0fa4162b1081",
@@ -2563,7 +2563,7 @@
                     "last_character_index": 1979
                 }
             ],
-            "answer": "The backend that allows many decoder language models to be automatically loaded in vLLM without manual implementation is the **Transformers backend**. This is because vLLM models can be automatically loaded using the [Transformers backend][transformers-backend] without needing to implement them in vLLm."
+            "answer": "The backend that allows many decoder language models to be automatically loaded in vLLM without manual implementation is the **Transformers backend**. This is because vLLM models can be automatically loaded using the Transformers backend without needing to implement them in vLLM."
         },
         {
             "question_id": "43914555-ab14-430a-8092-544eba3a30fd",
@@ -2620,7 +2620,7 @@
                     "last_character_index": 48248
                 }
             ],
-            "answer": "The available resources for vLLM contributors working on speculative decoding are as follows:\n\n1. **Speculative Decoding Documentation**: [Speculative Decoding in vLLM](https://x.com/karpathy/status/1697318534555336961) by Karpathy.\n2. **FAQ on Output Variability**: [Can the output of a prompt vary across runs in vLLM?](../usage/faq.md).\n3. **Speculative Decoding Implementation**: Reference to [this assertion implementation](https://github.com/vllm-project/vllm/blob/b67ae00cdbbe1a58ffc8ff170f0c8d79044a684a/tests/spec_decode/e2e/conftest.py#L291).\n4. **Speculative Decoding FAQ**: [Speculative Decoding FAQ](../usage/faq.md).\n\nThese resources provide information on how to implement and use speculative decoding in vLLM."
+            "answer": "The following resources are available for vLLM contributors working on speculative decoding:\n\n1. A Hacker's Guide to Speculative Decoding in vLLM (https://www.youtube.com/watch?v=9wNAgpX6z_4)\n2. Documentation on batch expansion (https://docs.google.com/document/d/1T-JaS2T1NRfdP51qzqpyakoCXxSXTtORppiwaj5asxA/edit#heading=h.kk7dq05lc6q8)\n3. Dynamic speculative decoding (https://github.com/vllm-project/vllm/issues/4565)"
         },
         {
             "question_id": "a8e7dbd2-458e-428b-a969-cc5e22ce999b",
@@ -2677,7 +2677,7 @@
                     "last_character_index": 2000
                 }
             ],
-            "answer": "The vLLM versions affected by the **zmq bug** that can cause hanging are:\n\n- **vLLM 1.0.0**\n- **vLLM 1.0.0-0.1**\n\nThese versions may experience issues due to the bug affecting the underlying zmq implementation. If you're encountering hanging behavior, it's recommended to check with the project's maintainers or documentation for specific version-specific fixes."
+            "answer": "The vLLM instances affected by the **zmq bug** that can cause hanging are those running **vLLM 1.0.0** or earlier. This bug may be introduced in versions prior to 1.0.0 and could cause issues with the underlying zmq communication.\n\nIf you're experiencing issues with vLLM and the problem is related to the zmq communication, you should check if your version is up-to-date with the latest zmq drivers or if there are updates to the zmq implementation that may be causing the problem."
         },
         {
             "question_id": "cd5e1f0b-1053-4bc0-b4d8-84e003834785",
@@ -2734,7 +2734,7 @@
                     "last_character_index": 13092
                 }
             ],
-            "answer": "To install **vLLM** with a specific **CUDA version** using **pip**, you can use the `--extra-index-url` flag and specify the version you want. Here's how:\n\n### Example:\n\n```bash\n# Use a specific CUDA version, e.g., ROCm 6.3\nexport VLLM_PRECOMPILED_WHEEL_LOCATION=https://wheels.vllm.ai/vllm-1.0.0.dev-cp38-abi3-manylinux1_x86_64.whl\nuv pip install vllm \\\n    --torch-backend=auto \\\n    --extra-index-url https://wheels.vllm.ai/${VLLM_COMMIT}\n```\n\n### Key Points:\n\n- **CUDA Version**: The `--extra-index-url` URL uses the latest `vLLM_COMMIT` hash (from the main branch) to ensure compatibility with the specified CUDA version.\n- **CUDA is assumed to be already installed**: You can use `CUDA_HOME` from your system to ensure that the compiler is set up correctly.\n\n### Notes:\n\n- If you're using a **different CUDA version**, you’ll need to specify the `VLLM_PRECOMPILED_WHEEL_LOCATION` explicitly to point to the correct pre-built wheel.\n- This approach is ideal for development purposes where you want to use a specific version without recompiling from source."
+            "answer": "To install vLLM with a **specific CUDA version**, you can use the `--extra-index-url` flag in conjunction with a **commit hash** from a known version of vLLM. This approach ensures that the wheels are built with the specific CUDA version you want.\n\n### Steps:\n\n1. **Specify the CUDA version using a commit hash**:\n   - If you're using a specific CUDA version, you can use the commit hash from a known release. For example, if you're using CUDA 11.7, you can specify the commit hash from the main branch.\n\n   ```bash\n   export VLLM_COMMIT=72d9c316d3f6ede485146fe5aabd4e61dbc59069 # use full commit hash from the main branch\n   ```\n\n2. **Use the `--extra-index-url` to point to the wheels with that specific CUDA version**:\n   - This allows you to install vLLM with the exact CUDA version you want.\n\n   ```bash\n   uv pip install vllm \\\n       --torch-backend=auto \\\n       --extra-index-url https://wheels.vllm.ai/${VLLM_COMMIT}\n   ```\n\n### Example:\n\nIf you want to build vLLM with a specific CUDA version (e.g., 11.7):\n\n```bash\nexport VLLM_COMMIT=your-commit-hash\nuv pip install vllm \\\n    --torch-backend=auto \\\n    --extra-index-url https://wheels.vllm.ai/your-commit-hash/vllm-1.0.0-cuda-11.7\n```\n\n### Notes:\n\n- **CUDA Version**: The `--extra-index-url` points to the wheels built with the specific CUDA version. This ensures compatibility and correctness.\n- **Environment Variable**: Always set the `VLLM_TARGET_DEVICE` to `empty` before installation to avoid conflicts and ensure proper behavior.\n\nThis method ensures that vLLM is installed with the exact CUDA version you want, which is ideal for development or specific use cases."
         },
         {
             "question_id": "8447d11b-fb89-4c9c-a8d9-6251ab28c7f6",
@@ -2791,7 +2791,7 @@
                     "last_character_index": 2355
                 }
             ],
-            "answer": "| Quantization Method | Supported |\n|--------------------|-----------|\n| GPTQ                | ✅         |\n| AWQ                  | ✅         |\n| INT4, INT8, FP8      | ✅         |\n| INC (W8A8)           | ✅         |\n\n**Supported Quantization Methods for vLLM on Intel Gaudi:**\n\n- **GPTQ (Global Precision Quantization)**\n- **AWQ (Advanced Wide Quantization)**\n- **INT4/INT8/FP8 (Floating Point Integers)**\n- **INC (W8A8)**\n- **Paged Attention (from vLLM)**\n\n**Unsupported Quantization Methods for vLLM on Intel Gaudi:**\n\n- **Beam search**\n- **LoRA adapters**\n- **AWQ quantization**\n- **Prefill chunking (mixed-batch inferencing)**\n\nThese methods are supported for use with Intel Gaudi accelerators."
+            "answer": "The supported quantization methods for vLLM on Intel Gaudi are:\n\n- **GPTQ** (Quantization with GPTQ)\n- **AWQ** (Advanced Work Queue Quantization)\n- **INT4** (Intel 4-bit)\n- **INT8** (Intel 8-bit)\n- **FP8** (Floating Point 8-bit)\n\n**Unsupported quantization methods** for vLLM on Intel Gaudi include:\n\n- **AWQ** (Advanced Work Queue Quantization) – **Not supported**\n- **INT4** – **Not supported**\n- **INT8** – **Not supported**\n- **FP8** – **Not supported**\n\nThese are the quantization methods supported and unsupported for vLLM on Intel Gaudi."
         },
         {
             "question_id": "7f0cb10b-945c-482b-9ba7-100c39d9c64b",
@@ -2848,7 +2848,7 @@
                     "last_character_index": 7822
                 }
             ],
-            "answer": "To uninstall a vLLM deployment using Helm, you can use the `helm uninstall` command. Here's how to do it:\n\n```bash\nhelm uninstall vllm\n```\n\nThis command will remove the Helm chart associated with your vLLM deployment. Make sure that the Helm chart is already installed and exists in your Kubernetes environment. If the chart is already uninstalled, the command will not be necessary."
+            "answer": "To uninstall a vLLM deployment using Helm, follow the steps below:\n\n### 1. **Remove Helm Chart**\n- If you've already deployed the vLLM application using Helm, you can uninstall it by running:\n  ```bash\n  helm uninstall vllm\n  ```\n\n### 2. **Uninstall Resources**\n- Ensure that any Kubernetes resources (services, pods, etc.) associated with the vLLM deployment are also removed from the Kubernetes cluster:\n  ```bash\n  kubectl delete -f vllm/deploy.yaml\n  kubectl delete -f vllm/service.yaml\n  ```\n\n### 3. **Verify Uninstallation**\n- Finally, verify that the vLLM deployment has been successfully removed from your Kubernetes cluster:\n  ```bash\n  kubectl get pods -n vllm\n  kubectl get services -n vllm\n  ```\n\nThis ensures that all components related to the vLLM deployment are deleted, leaving the cluster free for other applications or services."
         },
         {
             "question_id": "5e2555d2-a1a6-4402-ac72-4e7f46378439",
@@ -2905,7 +2905,7 @@
                     "last_character_index": 2816
                 }
             ],
-            "answer": "The three main usage patterns supported by vLLM are:\n\n1. **Inference and Serving**: Run a single instance of a model.\n2. **Deployment**: Scale up model instances for production.\n3. **Training**: Train or fine-tune a model."
+            "answer": "- **Inference and Serving**  \n- **Deployment**  \n- **Training**"
         },
         {
             "question_id": "f91d4c7f-8bda-4cdf-8613-fc746027dadd",
@@ -2962,7 +2962,7 @@
                     "last_character_index": 1900
                 }
             ],
-            "answer": "To serve a model with audio input support in vLLM, you can use the following configuration:\n\n```bash\n# Example command to serve a model with audio input support\nvllm serve s3://your-bucket/audio-model/v1 \\\n    --model-type audio \\\n    --enable-lora \\\n    --model-id <audio-model-id>\n```\n\nThis command sets up the vLLM server to handle audio input with the specified model. You can customize the model ID and other parameters as needed."
+            "answer": "To serve a model with audio input support in vLLM, you need to ensure that the model is configured to support audio inputs. You can do this by specifying the appropriate model architecture and setting the `VLLM_USE_V1=0` flag when running the `vllm serve` command. For example:\n\n```bash\nvllm serve s3://my-bucket/audio_model_model/\n```\n\nThis command will run the model with audio input support, as required by the vLLM implementation."
         },
         {
             "question_id": "070dd694-1d93-473d-8d04-3ac50689b023",
@@ -3019,7 +3019,7 @@
                     "last_character_index": 7314
                 }
             ],
-            "answer": "To add support for a new reasoning model in vLLM, you need to:\n\n1. **Register the Model**: Register your model in the vLLM ecosystem. This can be done using the Hugging Face CLI or by implementing the model in the `vllm` package.\n\n2. **Register the Model in vLLM**: \n   - If you are using the Hugging Face CLI, you can register your model using the `huggingface-cli register` command.\n   - If you are implementing the model in the vLLM package, ensure that your model is compatible with the required architecture and that your implementation is correctly integrated.\n\n3. **Update the Model**: Once your model is registered, update the relevant parts of the vLLM codebase to support it.\n\n4. **Test Your Model**: After making these changes, test your model to ensure it works correctly and that all new features like reasoning support are properly implemented."
+            "answer": "To add support for a new reasoning model in vLLM, follow these steps:\n\n1. **Identify the model and its reasoning parser**: First, identify the model you want to support and the reasoning parser it uses. For example, if you're using the DeepSeek R1 reasoning model, you'll need to specify the `deepseek_r1` parser.\n\n2. **Modify the model implementation**: If the model uses a different implementation (e.g., using a custom `QKVParallelLinear` class), you'll need to update the `load_weights` method in your model class to load the weights correctly. This will involve loading the weights from a Hugging Face model checkpoint and assigning them to your model's layers.\n\n3. **Update the model configuration**: Ensure that the model's configuration file includes the necessary information about the reasoning model and its parameters. This includes specifying the model name, version, and any other relevant details.\n\n4. **Register your model**: Once your model is ready, register it in vLLM to allow it to be used for reasoning tasks. This can be done through the vLLM registration process, where you'll provide the model name, version, and other relevant details.\n\nBy following these steps, you can successfully add support for a new reasoning model in vLLM."
         },
         {
             "question_id": "85e0249b-06ff-4e2a-a0fc-336dc1cbe5f8",
@@ -3076,7 +3076,7 @@
                     "last_character_index": 42216
                 }
             ],
-            "answer": "The returned multimodal embeddings must be either a 3D [torch.Tensor][] of shape `(num_items, feature_size, hidden_size)` or a list / tuple of 2D [torch.Tensor][] of shape `(feature_size, hidden_size)`."
+            "answer": "The returned multimodal embeddings must be either a 3D [torch.Tensor][] of shape `(num_items, feature_size, hidden_size)` or a list / tuple of 2D [torch.Tensor][]'s of shape `(feature_size, hidden_size)`."
         },
         {
             "question_id": "bfd2db0e-020b-4efc-994a-8692df116cd7",
@@ -3133,7 +3133,7 @@
                     "last_character_index": 1963
                 }
             ],
-            "answer": "The vLLM server endpoints for the offline LLM generate and chat APIs are:\n\n- **LLM generate (output logprobs)**: `http://{vllm server host}:{vllm server port}/v1`\n- **LLM chat (chat template)**: `http://{vllm server host}:{vllm server port}/v1`\n\nThese endpoints are the same for both APIs, allowing seamless integration of vLLM as the backend for your LLM inference needs."
+            "answer": "The vLLM server endpoints correspond to the following APIs:\n\n- `LLM.get_default_sampling_params()` returns the default sampling parameters for the model.\n- `LLM.get_default_generation_config()` returns the default generation configuration for the model.\n- `LLM.beam_search()` processes the generation with beam search.\n- `LLM.chat()` processes the generation with chat templates.\n\nThese endpoints are exposed by default in the vLLM server and can be accessed by the user using the default API endpoints."
         },
         {
             "question_id": "0593b68b-2f74-440e-9d31-f09f06f09bb1",
@@ -3190,7 +3190,7 @@
                     "last_character_index": 274
                 }
             ],
-            "answer": "The three recommended ways to implement third-party connectors for vLLM disaggregated prefilling are:\n\n1. **Fully-customized connector**: Implement your own `Connector`, and call third-party libraries to send and receive KV caches, and many many more (like editing vLLM's model input to perform customized prefilling, etc). This approach gives you the most control, but at the risk of being incompatible with future vLLM versions.\n\n2. **Database-like connector**: Implement your own `LookupBuffer` and support the `insert` and `drop_select` APIs just like SQL.\n\n3. **P2pNcclConnector**: refer to <gh-file:examples/online_serving/disaggregated_serving_p2p_nccl_xpyd/disagg_example_p2p_nccl_xpyd.sh> for the example usage of P2pNcclConnector disaggregated prefilling."
+            "answer": "- **Fully-customized connector**: Implement your own `Connector`, and call third-party libraries to send and receive KV caches, and many many more (like editing vLLM's model input to perform customized prefilling, etc). This approach gives you the most control, but at the risk of being incompatible with future vLLM versions.\n\n- **Database-like connector**: Implement your own `LookupBuffer` and support the `insert` and `drop_select` APIs just like SQL."
         },
         {
             "question_id": "5521313f-eae6-431d-9ff4-f3cc31698bfa",
@@ -3247,7 +3247,7 @@
                     "last_character_index": 1871
                 }
             ],
-            "answer": "If you encounter persistent or strange build errors in vLLM after significant changes or switching branches, you should follow these steps:\n\n### 1. **Check for Conflicting Build Dependencies**\n- Ensure all build dependencies are correctly installed. This includes:\n  - `ccache` for fast rebuilds\n  - `ninja` for compiling CMake\n  - `cmake` for CMake\n- If you're using a CI/CD setup, check for build configuration issues in your CI pipeline.\n\n### 2. **Review Build Log Output**\n- Look at the build log output to identify specific errors. Common issues include:\n  - Missing dependencies\n  - Incorrect compiler flags\n  - Conflicting CUDA versions\n  - Incorrect build targets\n\n### 3. **Update Configuration Files**\n- Check the CMake configuration files (`CMakeUserPresets.json` and `CMakeFiles.cmake`) for any configuration issues. Ensure that:\n  - `CMAKE_CUDA_COMPILER` points to the correct CUDA compiler\n  - `CMAKE_JOB_POOLS` is set to a reasonable number to handle parallel builds\n  - The CUDA build is properly configured\n\n### 4. **Test the Project with Minimal Changes**\n- If possible, start with a minimal project setup and test the build. This helps identify if the problem is with the build system or the specific changes being made.\n\n### 5. **Try to Reproduce the Problem Locally**\n- If you can create a local project with the same codebase and build configuration, test the build locally. This helps identify if the issue is with the build system or the specific changes.\n\n### 6. **Check for Known Issues or Known Fixes**\n- If the issue persists, check the official documentation or the vLLM community forums for known issues or updates that could be causing the problem.\n\n### 7. **Use the vLLM Build Tools**\n- If you're using a CI/CD pipeline, ensure that the build tools are correctly configured to handle the build process. For example, check the build tools used in your CI pipeline.\n\n### 8. **Consult the vLLM Documentation**\n- Refer to the official documentation for any known issues or updates that may be causing the problem. This can help you resolve it through official channels.\n\nBy following these steps, you can identify and resolve the issue with persistent or strange build errors in vLLM."
+            "answer": "If you encounter persistent or strange build errors in vLLM after significant changes or switching branches, here's what you should do:\n\n### 1. **Check for Build Errors in Your CMake Configuration**\n   - Look for `cmake --build ... --target install` errors in your CMake cache file (`CMakeCache.txt`).\n   - These errors usually indicate issues with the build process, such as missing dependencies, incorrect compiler flags, or conflicting CUDA versions.\n\n### 2. **Verify Build Tools and Dependencies**\n   - Ensure that:\n     - **CCache** is installed and set up correctly to optimize build times.\n     - **CMake** and **ninja** are installed.\n     - **CUDA Toolkit** is properly installed and accessible via `nvcc`.\n\n### 3. **Check for CUDA Version Conflicts**\n   - If you're using a different CUDA version than expected, this can cause build failures.\n   - Ensure that your build system is configured to use the correct CUDA version. You can check this by running:\n     ```bash\n     cmake --version\n     ```\n     and verifying that it matches the expected CUDA version.\n\n### 4. **Update vLLM Version**\n   - If you're using a version that doesn't match the latest vLLM wheel, ensure that your vLLM is updated to the correct version.\n   - This is especially important if you're using a new build configuration.\n\n### 5. **Check for Build Configuration Issues**\n   - Review the CMakeUserPresets.json file and ensure that the `CMAKE_CUDA_COMPILER` and other compiler flags are correctly set to your CUDA compiler.\n\n### 6. **Test with a Minimal Build**\n   - If you're encountering issues, try building a minimal version of vLLM that includes only the necessary components. This can help identify if the problem is with the build process or with the specific model you're trying to run.\n\n### 7. **Check for Build Process Logs**\n   - Look at the build logs for any detailed error messages. These can provide clues about what's going wrong in the build process.\n\nBy following these steps, you should be able to resolve common build issues and ensure a smooth integration of your changes into vLLM."
         },
         {
             "question_id": "66bcc3cc-043c-4705-9f54-0bd98185e403",
@@ -3304,7 +3304,7 @@
                     "last_character_index": 1956
                 }
             ],
-            "answer": "To evaluate accuracy of a quantized model using `lm_eval` in vLLM, you need to follow these steps:\n\n### 1. Preprocess Your Dataset\n\n- Load your dataset (e.g., `ultrachat` for calibration)\n- Use the `lm_eval` library to evaluate your model on the dataset.\n\n### 2. Run lm_eval on Your Model\n\nEnsure that your model is pre-trained and that you have the necessary libraries installed:\n\n```bash\npip install lm-eval\n```\n\n### 3. Use the lm_eval Tool\n\n- Run the `lm_eval` tool on your model:\n  \n  ```bash\n  vllm run --model <your_model_name> --evaluate <your_dataset_path> --evaluate_args <your_args>\n  ```\n\n- The output of this command will show the evaluation results, including accuracy, loss, and other metrics.\n\n### 4. Interpreting the Results\n\n- The `lm_eval` tool provides accuracy as a key metric.\n- If you're using a quantized model with weight quantization, ensure that the `add_bos_token=True` flag is included in your evaluations.\n\n### Example\n\nIf you're using a quantized model for instruction-tuning, you should include the `add_bos_token=True` argument in your evaluation. \n\n```bash\nvllm run --model <your_model_name> --evaluate <your_dataset_path> --evaluate_args add_bos_token=True\n```\n\nThis approach will allow you to evaluate the performance of your quantized model using `lm_eval`, which is essential for understanding the effectiveness of the quantization technique."
+            "answer": "To evaluate accuracy of a quantized model using `lm_eval` in vLLM, you can follow these steps:\n\n### 1. Install Required Libraries\n\nFirst, ensure you have the necessary libraries installed. The required packages are:\n\n```bash\npip install vllm lm-eval\n```\n\n### 2. Load the Model\n\nUse the standard `transformers` AutoModel classes to load your model:\n\n```python\nfrom transformers import AutoTokenizer, AutoModelForCausalLM\n\nMODEL_ID = \"your_model_id_here\"\nmodel = AutoModelForCausalLM.from_pretrained(MODEL_ID, device_map=\"auto\", torch_dtype=\"auto\")\ntokenizer = AutoTokenizer.from_pretrained(MODEL_ID)\n```\n\n### 3. Prepare Calibration Data\n\nFor `lm_eval`, it is necessary to prepare a dataset that contains samples that will be used to estimate the quantization parameters. The dataset should be preprocessed in a similar way as the calibration data used for quantization.\n\n### 4. Apply Quantization\n\nThe quantization process is typically done as part of the model loading or during a quantization step. However, it's recommended to run the quantization process before evaluating the model.\n\n### 5. Evaluate Accuracy\n\nOnce the quantization is applied, run the evaluation using `lm_eval`:\n\n```python\nfrom lm_eval import lm_eval\n\n# Run evaluation\nresult = lm_eval.run(\n    model,\n    tokenizer,\n    max_length=2048,\n    add_bos_token=True,\n    # other parameters as needed\n)\n```\n\n### 6. Interpret Results\n\nThe evaluation will provide metrics such as accuracy, which can be interpreted to assess the effectiveness of the quantization process.\n\n### Example Usage\n\n```python\nfrom lm_eval import lm_eval\n\n# Run evaluation\nresult = lm_eval.run(\n    model,\n    tokenizer,\n    max_length=2048,\n    add_bos_token=True,\n    # other parameters as needed\n)\n```\n\nThis process allows you to assess the accuracy of your quantized model using the lm_eval library in vLLM."
         },
         {
             "question_id": "359b6c20-fa53-4cc3-871d-2d42e9001c3f",
@@ -3361,7 +3361,7 @@
                     "last_character_index": 3192
                 }
             ],
-            "answer": "The process for reporting security vulnerabilities in vLLM is as follows:\n\n1. **Report privately** via the [GitHub security advisory system](https://github.com/vllm-project/vllm/security/advisories/new).\n2. The **Vulnerability Management Team (VMT)** will triage the vulnerability and work with the project maintainers to prepare a security advisory.\n3. The **VMT** will publish the security advisory on GitHub and update release notes with the reference.\n4. The **VMT** will also coordinate with the project maintainers to publish a fix and release the update.\n\nIf you discover a security vulnerability, please follow the instructions in the [security policy](https://github.com/vllm-project/vllm/blob/main/SECURITY.md) to report it."
+            "answer": "If you report a security vulnerability in vLLM, please follow the instructions in the [Security Policy](https://github.com/vllm-project/vllm/tree/main/SECURITY.md) to report it through the GitHub security advisory system. You can also reach out to the VMT members for further assistance."
         },
         {
             "question_id": "bfdddb92-dfbf-4ef6-9867-2f0919e75505",
@@ -3394,8 +3394,8 @@
                 },
                 {
                     "file_path": "data/raw/vllm-0.10.1/benchmarks/auto_tune/auto_tune.sh",
-                    "first_character_index": 6746,
-                    "last_character_index": 8007
+                    "first_character_index": 6748,
+                    "last_character_index": 8009
                 },
                 {
                     "file_path": "data/raw/vllm-0.10.1/examples/online_serving/openai_transcription_client.py",
@@ -3418,7 +3418,7 @@
                     "last_character_index": 8018
                 }
             ],
-            "answer": "A model must meet the following requirements to be compatible with vLLM:\n\n1. **Initialization Code**: All vLLM modules within the model must include a `prefix` argument in their constructor, which is crucial for runtime support and non-uniform quantization compatibility.\n\n2. **Support for Transformers Backend**: The model must be a Transformers-compatible custom model, which typically means it has the correct structure and includes the necessary modules (like `MyAttention` and `MyModel`) that support the Transformers backend for vLLM.\n\n3. **Configuration Options**: The model must include parameters such as `base_model_tp_plan` and/or `base_model_pp_plan` if it is to support tensor parallel or pipeline parallel features. These configurations are necessary for compatibility with vLLM's features.\n\nThese requirements ensure compatibility with vLLM's architecture and functionality."
+            "answer": "A model must meet the following requirements to be compatible with vLLM:\n\n1. **Prefix in all vLLM modules**: All vLLM modules within the model must include a `prefix` argument in their constructor. This is crucial for:\n   - Runtime support: vLLM's attention operators are registered in a model's state by their full names.\n   - Non-uniform quantization support: A quantized checkpoint can selectively quantize certain layers while keeping others in full precision. By providing the `prefix` during initialization, vLLM can match the current layer's `prefix` with the quantization configuration to determine if the layer should be initialized in quantized mode.\n\n2. **Support for attention backend**: The model must contain `_supports_attention_backend = True`.\n\nThese requirements ensure compatibility with vLLM's features like tensor parallel and/or pipeline parallel."
         },
         {
             "question_id": "b4fb8f6b-b613-46fa-a0aa-aebcf9ed2b14",
@@ -3475,7 +3475,7 @@
                     "last_character_index": 5321
                 }
             ],
-            "answer": "The recommended starting number of samples for calibration data in **INT4 quantization** is typically **1000**. This is a common practice to ensure that the model is well-calibrated with a sufficient number of samples, especially in scenarios where a small dataset might not be sufficient for accurate quantization."
+            "answer": "The recommended starting number of samples for calibration data in INT4 quantization is **16**. This value ensures that the quantization process is properly initialized and that the model can learn from the calibration data effectively."
         },
         {
             "question_id": "9423895e-b4b2-4844-ba61-c818f2c48f27",
@@ -3532,7 +3532,7 @@
                     "last_character_index": 766
                 }
             ],
-            "answer": "vLLM supports the **parallel tool calls** format for Llama 3.1 and 3.2 models. This means that when a model is used to generate tool calls, it can produce a stream of tool calls in a way that is compatible with the tools defined in the request.\n\nIf you're using a model like Llama 3.1 or 3.2, you can expect a stream of tool calls in the expected format, which may be different from the tool call format specified in the `tools` parameter.\n\nYou can test this by making a request and seeing if the tool calls are produced in the expected format. If your model does not support parallel tool calls, it will not generate them. Some models may not support this feature, and you should be aware of that limitation."
+            "answer": "vLLM supports the **streaming format** for Llama 3.1 and 3.2 models. This format allows the model to generate tool calls in a **streaming** fashion, which is particularly useful when dealing with **parallel tool calls** in a large-scale application.\n\nHowever, **not all models** (such as Llama 3.1, 3.2, or newer models) are designed to support this format. If you're using a model that does not support streaming, you may encounter issues with parallel tool calls in a streaming environment.\n\nIf you're using a model that supports streaming, you can test with the following example:\n\n```python\nimport asyncio\nimport openai\n\nasync def test_streaming_format(client: openai.AsyncOpenAI, server_config: ServerConfig):\n    # Create a server configuration with streaming support\n    server_config.stream = True\n    server_config.tool_call_parser = \"pythonic\"\n    server_config.tool_call_parser_plugin = \"pythonic\"\n    \n    # Generate a tool call using streaming format\n    tool_call = await client.chat.completions.create(\n        model=client.models.list().data[0].id,\n        messages=[{\"role\": \"user\", \"content\": \"What tool calling format does vLLM support for Llama 3.1 and 3.2 models?\"}],\n        tools=tools,\n        tool_choice=\"auto\"\n    )\n    \n    # Handle streaming format\n    result = await tool_call.choices[0].message.tool_calls[0].function\n    print(f\"Function called: {result.name}\")\n    print(f\"Arguments: {result.arguments}\")\n    print(f\"Result: {result}\")\n\n# Run the test\nasync with pytest.mainFixture(config=server_config):\n    await test_streaming_format(client, server_config)\n```\n\nThis test demonstrates how to enable streaming format support for Llama 3.1 and 3.2 models and how to handle the corresponding tool calls."
         },
         {
             "question_id": "2cfb7657-3bdf-4e81-bfe4-f0dfb8f557f6",
@@ -3589,7 +3589,7 @@
                     "last_character_index": 1999
                 }
             ],
-            "answer": "When preparing calibration data for **INT4 quantization in vLLM**, it is recommended to use **around 100-200 calibration samples** to ensure accurate quantization and proper performance. This is because INT4 quantization requires a large number of samples to train the quantization algorithm and validate the effectiveness of the quantization configuration.\n\nLet me know if you'd like further details!"
+            "answer": "When preparing calibration data for INT4 (Intel 4th Generation) quantization in vLLM, it is typically recommended to use **at least 1000 samples** to ensure accurate quantization and proper model performance. This is because INT4 quantization is based on a wide range of input data, and having a sufficient number of samples helps in capturing the quantization behavior across different inputs.\n\nHowever, it's important to note that this recommendation can vary depending on the specific model, hardware, and quantization configuration. For best results, ensure that the calibration data is representative of the intended use case and that the number of samples is sufficient to capture the quantization dynamics accurately."
         },
         {
             "question_id": "7ddc938a-4b0c-4e26-86e9-666e0ab68c28",
@@ -3646,7 +3646,7 @@
                     "last_character_index": 19776
                 }
             ],
-            "answer": "The required CUDA compiler version to build Machete kernels in vLLM is **CUDA 12.8 or later**. This is because the kernels in Machete are designed for **Blackwell architecture**, which requires CUDA versions starting from 12.8 or later. If you're using an older version, such as 12.0 or earlier, you may not be able to build the kernels for Blackwell."
+            "answer": "The required CUDA compiler version to build Machete kernels in vLLM is **CUDA 12.8 or later**. This is because the kernels require support for **SM120** and **SM100** architectures, which were introduced in CUDA 12.8 and later versions.\n\nIf you're using a version of CUDA less than 12.8, you may not be able to build the Machete kernels as they require support for those specific architectures."
         },
         {
             "question_id": "efa50722-19a6-44a2-ab89-e554eb436899",
@@ -3703,7 +3703,7 @@
                     "last_character_index": 1465
                 }
             ],
-            "answer": "vLLM supports the following model architectures for GPT-2 models:\n\n- **Qwen2ForCausalLM**  \n  - **Qwen/Qwen2-7B** (Qwen 2.7B)  \n\nThese models are specifically designed for GPT-2 and are supported via vLLM. If you encounter errors like the one mentioned in the log, please check if you're using the correct version of the model and ensure that all dependencies are properly installed."
+            "answer": "vLLM supports the following model architectures for GPT-2 models:\n\n- GPT2LMHeadModel"
         },
         {
             "question_id": "16cc036e-cfe4-46c7-8f1b-58402f6e4fdb",
@@ -3760,7 +3760,7 @@
                     "last_character_index": 7744
                 }
             ],
-            "answer": "To disable unused modalities completely in vLLM multimodal models, you can set the `mm_processor_cache_gb` to zero. This disables the cache for multi-modal inputs, allowing for better memory usage without sacrificing performance."
+            "answer": "You can disable unused modalities completely by setting the `mm_processor_cache_gb` argument to zero in the `llm` configuration, which disables the multi-modal processor cache. This approach avoids using the cache and ensures the model processes only the necessary multi-modal data."
         },
         {
             "question_id": "0f5d97bf-9666-4550-ac80-1e88084214dc",
@@ -3817,7 +3817,7 @@
                     "last_character_index": 9815
                 }
             ],
-            "answer": "When evaluating FP8 quantized models using `lm_eval`, it is essential to include the following argument to ensure proper accuracy assessment:\n\n```bash\n--quantization fp8\n```\n\nThis argument will allow `lm_eval` to interpret the quantized model as an FP8 quantized model, ensuring accurate performance metrics are computed."
+            "answer": "When evaluating FP8 quantized models with `lm_eval`, you should include the following argument to ensure proper accuracy assessment:\n\n```bash\n--eval-quantization --quantization-quantization-quantization\n```\n\nThis argument is used to evaluate the quantization process and assess whether the model's accuracy is preserved in FP8. It ensures the model is being quantized correctly and that the FP8 representation is preserving the model's accuracy."
         },
         {
             "question_id": "3620bb65-9be5-4959-88b6-74552f6e3be2",
@@ -3874,7 +3874,7 @@
                     "last_character_index": 896
                 }
             ],
-            "answer": "To be compatible with vLLM's Transformers backend, a custom model must meet the following three requirements:\n\n1. Be a Transformers compatible custom model (see [Transformers - Customizing models](https://huggingface.co/docs/transformers/en/custom_models)).\n2. Have a `config.json` file that includes the `auto_map.AutoModel` configuration.\n3. Be a base model that supports `MyAttention` and `MyModel` with `_supports_attention_backend = True`."
+            "answer": "To be compatible with vLLM's Transformers backend, a custom model must meet the following requirements:\n\n1. Be a Transformers compatible custom model (see [Transformers - Customizing models](https://huggingface.co/docs/transformers/en/custom_models)).\n2. Have a correct configuration file structure (e.g., `config.json`).\n3. Include `auto_map.AutoModel` in the model's configuration to ensure compatibility."
         },
         {
             "question_id": "54e177d5-9249-4653-b6ea-175de7f7411f",
@@ -3931,7 +3931,7 @@
                     "last_character_index": 42524
                 }
             ],
-            "answer": "vLLM handles sharding and quantization of model weights during initialization by using a combination of two approaches:\n\n1. **Sharding during initialization**: \n   - The weights are sharded into multiple pieces (shards) based on the maximum allowed shard size (e.g., 5GB per shard).\n   - Each shard is then saved as a separate file (either a single file or multiple files with shard numbers).\n\n2. **Sharding after initialization**: \n   - When the model is initialized, the weights are sharded and transferred to TPUs in a way that minimizes memory usage.\n   - This approach allows for efficient handling of large models by distributing the weight data across multiple GPUs.\n\nAdditionally, vLLM supports quantization by either:\n- **Changing the model weights after initialization** (which can be done to load full weights on each GPU and then shard the weights, but this approach is not scalable for large models),\n- **Changing the model weights during initialization** (which is the recommended approach and allows for smaller memory overhead).\n\nThe implementation ensures that both sharding and quantization features are handled efficiently, making it suitable for use with both old and new versions of vLLM."
+            "answer": "vLLM handles sharding and quantization of model weights by:\n\n1. **Sharding during model initialization**: If the model weights are needed to be sharded, the weights are divided into segments (shards) based on the maximum allowed size per shard (5GB). This ensures that each GPU only loads 50GB of weights, as the model is designed to be shardable.\n\n2. **Quantization during model initialization**: If quantization is applied, the weights are quantized and stored in safetensors files. During the initialization phase, the quantization is applied, and the saved weights are distributed across the available GPUs. This prevents a large memory overhead by distributing the weights efficiently.\n\nThese steps ensure that the model can be initialized with both old and new versions of vLLM, while also handling the sharding and quantization requirements effectively."
         },
         {
             "question_id": "cc3dcf4f-5155-4592-91eb-76ddb4e738b1",
@@ -3988,7 +3988,7 @@
                     "last_character_index": 1637
                 }
             ],
-            "answer": "To build a vLLM wheel from source for CUDA GPU installations, follow these steps:\n\n1. **Install the necessary dependencies**:\n   - Install [CUDA Toolkit](https://developer.apple.com/download/all/) and its required tools.\n   - Install [CUDA compiler](https://developer.apple.com/download/all/) and its tools.\n   - Install [CUDA Toolkit](https://developer.apple.com/download/all/).\n\n2. **Install the required Python packages**:\n   - Install [PyTorch](https://pytorch.org/get-started/locally/) and [PyTorch Lightning](https://pytorch-lightning.readthedocs.io/en/latest/).\n   - Install [TorchVision](https://pytorch.org/get-started/locally/).\n\n3. **Build and install vLLM from source**:\n   - Clone the vLLM repository from GitHub.\n   - Use the following commands to install the required packages and build vLLM:\n     ```bash\n     git clone https://github.com/vllm-project/vllm.git\n     cd vllm\n     uv pip install -r requirements/cpu.txt\n     uv pip install -e .\n     ```\n\n4. **Build and install vLLM from source**:\n   - If you're using a CUDA GPU, make sure to install the required CUDA packages before building vLLM.\n   - Once all dependencies are installed, build and install vLLM from source using the following commands:\n     ```bash\n     # Build and install vLLM from source\n     git clone https://github.com/vllm-project/vllm.git\n     cd vllm\n     uv pip install -r requirements/cpu.txt\n     uv pip install -e .\n     ```\n\n5. **Build the vLLM wheel**:\n   - If you're using the pre-built Docker image, you can use the following command to build the vLLM wheel:\n     ```bash\n     docker build -f docker/Dockerfile.cpu \\\n                 --tag vllm-cpu-env .\n     ```\n\n6. **Run the vLLM server**:\n   - Launch the vLLM server using the following command:\n     ```bash\n     docker run --rm \\\n                 --privileged=true \\\n                 --shm-size=4g \\\n                 -p 8000:8000 \\\n                 -e VLLM_CPU_KVCACHE_SPACE=<KV cache space> \\\n                 -e VLLM_CPU_OMP_THREADS_BIND=<CPU cores for inference> \\\n                 vllm-cpu-env \\\n                 --model=meta-llama/Llama-3.2-1B-Instruct \\\n                 --dtype=bfloat16 \\\n                 other vLLM OpenAI server arguments\n     ```\n\nThese steps will allow you to build and run vLLM from source for CUDA GPU installations."
+            "answer": "To build a vLLM wheel from source for CUDA GPU installations, you need to follow these steps:\n\n1. **Install the required dependencies**:\n   - **CUDA Toolkit**: Make sure you have the latest version of CUDA installed on your system.\n   - **CUDA Toolkit for ARM**: If you're using ARM, make sure you have the correct version of CUDA installed.\n   - **CMake**: Ensure that CMake is installed and properly configured.\n\n2. **Install prerequisites**:\n   - Install Python from the official Python website.\n   - Install the required dependencies for building vLLM. These include:\n     - **PyTorch**: If you're using PyTorch, you may need to install it from source.\n     - **PyArrow**: This is required for data handling.\n     - **CUDA Toolkit**: Ensure that CUDA Toolkit is properly installed and configured.\n\n3. **Build vLLM from source**:\n   - Clone the vLLM repository from the GitHub repository.\n   - Use the following commands to build and install vLLM from source:\n     ```bash\n     git clone https://github.com/vllm-project/vllm.git\n     cd vllm\n     uv pip install -r requirements/cuda.txt\n     uv pip install -e .\n     ```\n\n4. **Install the CUDA GPU support**:\n   - Download and install the required CUDA GPU packages from the official website.\n   - Once installed, verify that the CUDA package is properly configured.\n\n5. **Build the vLLM wheel**:\n   - After installing the necessary packages, run the following commands to build and install vLLM:\n     ```bash\n     python setup.py build\n     ```\n\n6. **Run the vLLM server**:\n   - Once the wheel is built, run the vLLM server with the necessary arguments. This includes setting the model, device, and other parameters based on your requirements.\n\nBy following these steps, you should be able to build a vLLM wheel from source for CUDA GPU installations."
         },
         {
             "question_id": "99f0b809-1905-4f24-82e6-fa7c7866418d",
@@ -4045,7 +4045,7 @@
                     "last_character_index": 7864
                 }
             ],
-            "answer": "The models currently covered in vLLM's end-to-end performance validation include Llama3, Llama4, and Mixtral, as well as NVIDIA H100 and AMD MI300x hardware."
+            "answer": "The models currently covered in vLLM's end-to-end performance validation before each release are:\n\n- Llama3\n- Llama4\n- Mixtral"
         },
         {
             "question_id": "30266ac7-6f42-4e3f-9bce-30219ee46f93",
@@ -4102,7 +4102,7 @@
                     "last_character_index": 10612
                 }
             ],
-            "answer": "The minimum NVIDIA GPU compute capability required for INT4 computation in vLLM is 8.0 (Ampere)."
+            "answer": "The minimum NVIDIA GPU compute capability required for INT4 computation in vLLM is 8.0 (Ampere, Ada Lovelace, Hopper, Blackwell)."
         },
         {
             "question_id": "d8a776b1-adb4-428b-8e81-306998a43554",
@@ -4159,7 +4159,7 @@
                     "last_character_index": 1526
                 }
             ],
-            "answer": "The minimum vLLM version required for P2P NCCL connector functionality is **vLLM v1**."
+            "answer": "The minimum vLLM version required for P2P NCCL connector functionality is **v1.0.0**. This is specified in the context, which indicates that vLLM requires this version for compatibility and functionality with the P2P NCCL connector."
         },
         {
             "question_id": "3f4ce35c-5c00-4b7f-8781-d292056ba4fb",
@@ -4216,7 +4216,7 @@
                     "last_character_index": 3674
                 }
             ],
-            "answer": "Yes, vLLM can serve multiple models on a single port using the OpenAI API. The key is to configure the server to accept multiple model names, typically using the `--api-key` or environment variable `VLLM_API_KEY`.\n\n### How to Do That\n\n1. **Install vLLM**: Ensure you have vLLM installed.\n2. **Configure the API Server**: Use the `vllm serve` command to start the server with the necessary parameters.\n3. **Pass Multiple Models**: When starting the server, specify the model name twice, e.g., `--model 1 --model 2`, to allow the server to handle multiple models simultaneously.\n\n### Example Usage\n\n```bash\nvllm serve NousResearch/Meta-Llama-3-8B-Instruct \\\n  --model 1 \\\n  --model 2\n```\n\nThis configuration will allow the server to serve both models on the same port, maximizing resource utilization."
+            "answer": "Yes, **vLLM can serve multiple models on a single port using the OpenAI API**. Here's how:\n\n### What's Supported:\n- vLLM provides an HTTP API server that supports:\n  - OpenAI's **Completions API**\n  - OpenAI's **Chat API**\n  - Additional features like **temperature, top_k, and generation_config**.\n\n### How to Serve Multiple Models:\n1. **Use the OpenAI API**:\n   - Start the vLLM server with the OpenAI API endpoint.\n   - This allows you to serve models and interact with them using an HTTP client.\n\n2. **Use the vLLM API Server**:\n   - If you want to serve multiple models (e.g., multiple LLMs), you can pass the model names to the vLLM service.\n\n### Example:\n```bash\nvllm serve NousResearch/Meta-Llama-3-8B-Instruct \\\n  --dtype auto \\\n  --api-key token-abc123\n```\n\nThis will start the vLLM server with one model, and you can also start another model with a different name. The server will handle both models on the same port.\n\n### Summary:\n- **vLLM Server** supports both **OpenAI-compatible API** and **self-contained data parallel** deployments.\n- You can **run multiple models** on a single port using the OpenAI API server.\n\nLet me know if you want to test this with a specific model!"
         },
         {
             "question_id": "5a5189ea-56a8-40ea-a338-94322a242135",
@@ -4273,7 +4273,7 @@
                     "last_character_index": 1708
                 }
             ],
-            "answer": "To configure data parallel deployment in vLLM, follow these steps:\n\n1. **Set the `data_parallel` flag** in your vLLM configuration (typically found in a `.yaml` file used for deployment):\n   ```yaml\n   data_parallel:\n     enabled: true\n   ```\n\n2. **Set the `data_parallel_size`** and `data_parallel_rank` values in your configuration to define how many model weights will be replicated across instances/GPUs:\n   ```yaml\n   data_parallel_size: 2\n   data_parallel_rank: 0\n   ```\n\n3. **Set the `data_parallel_address`** for the DP rank if it's on a different node or IP than the default (if your DP ranks are co-located):\n   ```yaml\n   data_parallel_address: 192.168.1.100\n   ```\n\n4. **Set the `data_parallel_rpc_port`** if your DP ranks are using a different RPC port:\n   ```yaml\n   data_parallel_rpc_port: 4040\n   ```\n\n5. **Enable expert parallelism** if your DP ranks are part of a multi-node setup and TP is used:\n   ```yaml\n   enable_expert_parallel: true\n   ```\n\nBy following these steps, you configure your vLLM environment to support data parallel deployment, allowing efficient use of GPU resources for processing parallel requests."
+            "answer": "To configure a **Data Parallel (DP)** deployment in vLLM, you need to specify the following:\n\n### 1. **Data Parallel Configuration**\n- **`--data-parallel-size`**: Specify the size of the DP rank (in number of processes).\n- **`--data-parallel-rank`**: Assign a rank to each DP rank (e.g., `0` for rank 0, `1` for rank 1).\n- **`--enable-expert-parallel`**: If using EP or TP, enable this flag to enable expert parallelism.\n- **`--data-parallel-address`**: If the DP ranks are co-located (same node or IP), specify the address (default: `127.0.0.1`).\n- **`--data-parallel-rpc-port`**: If using a different RPC port for each DP rank, specify it (default: `13345`).\n\n### 2. **Optional Configuration Options**\n- **`--enable-expert-parallel`**: Enables expert parallelism for EP or TP.\n- **`--data-parallel-master-ip`**: Set the master IP for the DP master (default: `127.0.0.1`).\n- **`--data-parallel-master-port`**: Set the master port (default: `29500`).\n\n### Example Configuration\n```bash\n# For a single DP rank\nvllm serve model $MODEL --data-parallel-size 2 --data-parallel-rank 0\n\n# For two DP ranks (co-located)\nvllm serve model $MODEL --data-parallel-size 2 --data-parallel-rank 0 --data-parallel-rpc-port 13345\nvllm serve model $MODEL --data-parallel-size 2 --data-parallel-rank 1\n```\n\n### 3. **Using the `--enable-expert-parallel` Flag**\n- In multi-node cases, include the `--enable-expert-parallel` flag to enable expert parallelism (TP or EP).\n- This ensures that the expert layers are properly parallelized across all ranks.\n\n### 4. **Testing and Deployment**\n- After configuring, apply the changes using `kubectl apply -f <filename>`.\n- Test the deployment by running the following command to send a completion request to the vLLM model:\n\n```bash\ncurl http://mistral-7b.default.svc.cluster.local/v1/completions \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"model\": \"mistralai/Mistral-7B-Instruct-v0.3\",\n    \"prompt\": \"San Francisco is a\",\n    \"max_tokens\": 7,\n    \"temperature\": 0\n  }'\n```\n\nThis setup allows efficient and scalable handling of data parallel tasks in ML models using vLLM."
         },
         {
             "question_id": "d5df4835-9245-47ba-b9c5-28e690f70c85",
@@ -4330,7 +4330,7 @@
                     "last_character_index": 1990
                 }
             ],
-            "answer": "The CUDA architectures supported for Marlin MOE kernels in vLLM are:\n\n- **8.0;8.7;9.0+PTX** (for the MoE kernels with support for **FP8 quantization**)\n\n- **10.0a** (for the MoE kernel with **CUTLASS 9.0a** support)\n\n- **8.0;8.7;9.0+PTX** (for the MoE kernel with **CUTLASS 9.0a** support)\n\nThese are the supported CUDA architectures for the Marlin MOE kernels in vLLM."
+            "answer": "The **Marlin MOE kernels** support the following CUDA architectures:\n\n- **8.0**\n- **8.7**\n- **9.0+PTX**\n\nThese are the **recommended** architectures for running FP8 quantized MoE models on GPU platforms. If you're using a newer CUDA version (e.g., 12.3 or higher), it's recommended to use the **latest supported architectures** to ensure compatibility with the latest hardware."
         },
         {
             "question_id": "626fea67-be37-41c7-b801-ff643ca89b8c",
@@ -4387,7 +4387,7 @@
                     "last_character_index": 2991
                 }
             ],
-            "answer": "When there is **no expert parallelism** in vLLM, the implementation used is based on **tensor parallelism**. This means the `FusedMoEPrepareAndFinalize` implementation is derived from the **tensor parallelism** context.\n\nThe implementation used is:\n\n```python\nFusedMoEPrepareAndFinalize\n```\n\nThis implementation is typically based on the **`FusedMoEPermuteExpertsUnpermute`** class, which is designed to handle the **per-GPU** computation for MoE layers in a **data parallel** setting."
+            "answer": "When there is **no expert parallelism** in vLLM, the `FusedMoEPrepareAndFinalize` implementation is **not explicitly enabled** in the system. This means that the `maybe_make_prepare_finalize` method does **not** return a `FusedMoEPrepareAndFinalize` object, as the default behavior is to use **tensor parallelism** for MoE layers.\n\nIn this case, the `init_prepare_finalize` method will **not** attempt to create a `FusedMoEPrepareAndFinalize` object, as the default is to use tensor parallelism instead.\n\n### Final Answer:\nWhen there is **no expert parallelism**, the `FusedMoEPrepareAndFinalize` implementation is not explicitly used, and no `preparefinalize` object is created. Therefore, the correct answer is:\n\n**No `FusedMoEPrepareAndFinalize` object is created.**"
         },
         {
             "question_id": "d0853e7c-86df-4b77-85d6-206d49f713a5",
@@ -4444,7 +4444,7 @@
                     "last_character_index": 34505
                 }
             ],
-            "answer": "Security issues should be reported privately using the [vulnerability submission form](https://github.com/vllm-project/vllm/security/advisories/new)."
+            "answer": "To report security vulnerabilities in vLLM, you should follow the instructions provided in the [vLLM Security Policy](https://github.com/vllm-project/vllm/blob/main/SECURITY.md). Here are the steps:\n\n1. **Report privately** using the vulnerability submission form on GitHub at [https://github.com/vllm-project/vllm/security/advisories/new](https://github.com/vllm-project/vllm/security/advisories/new).\n\n2. **Ensure the report is private** and not shared with others. This helps protect the information being reported.\n\nIf you believe you have found a security vulnerability, please follow the instructions in the [vLLM Security Policy](https://github.com/vllm-project/vllm/blob/main/SECURITY.md) to ensure your report is handled properly.\n\nDo not share the vulnerability details publicly or with anyone else. The VMT will handle the rest of the process."
         },
         {
             "question_id": "9f727ae2-eb97-4224-bc71-676e52769bb9",
@@ -4501,7 +4501,7 @@
                     "last_character_index": 3175
                 }
             ],
-            "answer": "The three communication backends available for Expert Parallelism (EP) in vLLM are:\n\n1. `pplx` - Single node\n2. `deepep_high_throughput` - Multi-node prefill\n3. `deepep_low_latency` - Multi-node decode\n\nThese backends are used to optimize performance based on the specific use case and workload characteristics."
+            "answer": "The three communication backends available for Expert Parallelism (EP) in vLLM are:\n\n1. `pplx`  \n2. `deepep_high_throughput`  \n3. `deepep_low_latency`  \n\nThese backends are used to communicate between different GPU instances and processes."
         },
         {
             "question_id": "de8f43f8-80fa-4a17-9fdf-b00040702df8",
@@ -4558,7 +4558,7 @@
                     "last_character_index": 1875
                 }
             ],
-            "answer": "In vLLM's feature status legend, the symbols **✅**, **⚠️**, and **🪄** are used to indicate the status of a specific feature:\n\n- ✅: **Enabled** (the feature is active and will be used).\n- ⚠️: **Disabled** (the feature is turned off).\n- 🪄: **Not enabled** (the feature is not active).\n\nThese symbols help quickly identify whether a specific feature is on or off."
+            "answer": "In vLLM's feature status legend, the symbols **✅**, **⚠️**, and **🚨** represent the following:\n\n- ✅: **Ready** — indicates that the feature is ready for use.\n- ⚠️: **Not Ready** — indicates that the feature is not yet ready for use.\n- 🚧: **Not Available** — indicates that the feature is not available at this time.\n\nThese symbols help quickly identify the status of a feature in the vLLM environment."
         },
         {
             "question_id": "50a943ce-91e1-47d4-8d8d-ddb218f7d730",
@@ -4615,7 +4615,7 @@
                     "last_character_index": 2735
                 }
             ],
-            "answer": "The supported datatypes by the vLLM's ARM CPU backend are:\n\n- **u4b8** (4-bit unsigned byte)\n- **u8b128** (8-bit unsigned byte)\n\nThese are the supported types for the ARM CPU backend."
+            "answer": "The vLLM's ARM CPU backend supports the following datatypes:\n\n- `vllm::kU4B8` (u4b8)\n- `vllm::kU8B128` (u8b128)\n\nThese datatypes are compatible with ARM CPU architecture."
         },
         {
             "question_id": "3ea21165-0dc8-460f-9353-35c42abc69f1",
@@ -4667,12 +4667,12 @@
                     "last_character_index": 39651
                 },
                 {
-                    "file_path": "data/raw/vllm-0.10.1/docs/design/prefix_caching.md",
-                    "first_character_index": 0,
-                    "last_character_index": 1956
+                    "file_path": "data/raw/vllm-0.10.1/docs/deployment/frameworks/skypilot.md",
+                    "first_character_index": 5947,
+                    "last_character_index": 7937
                 }
             ],
-            "answer": "The two ways to format input when making requests to vLLM's classify endpoint are:\n\n1. **Text Prompt**: You can input the prompt directly as a text string. This is suitable for general classification tasks.\n2. **Multi-Modality Prompt**: You can combine text and image input into a single prompt. This is useful when you need to classify images or text with multiple modalities."
+            "answer": "The two ways to format input when making requests to vLLM's classify endpoint are:\n\n1. **Text Prompt**: Provide a single text prompt that includes all required information in a single line, such as \"Tell me about the model.\" This is ideal for models that expect a single text input.\n\n2. **Multiple Text and Image Pairs**: If the model supports multiple text and image inputs, specify both text and image in a structured format. This is useful for models like vLLM that require multiple input types. For example, you might format the input as:\n   ```text\n   \"Tell me about the model and the image.\"\n   \"What is in the image?\"\n   \"What is the capital of Italy?\"\n   ```\n\nThese formats ensure compatibility and ease of use when integrating with different models."
         },
         {
             "question_id": "4f575a44-7098-49ff-81ee-f925c13f956e",
@@ -4729,7 +4729,7 @@
                     "last_character_index": 58381
                 }
             ],
-            "answer": "The current limitation when using MLP speculators for speculative decoding in vLLM is that these models currently require running without tensor parallelism. This limitation will be fixed in a future release."
+            "answer": "The current limitation when using MLP speculators for speculative decoding in vLLM is that they require running the model without tensor parallelism, although it is possible to run the main model with tensor parallelism. This limitation will be fixed in a future release."
         },
         {
             "question_id": "8ef264c6-cab8-4326-920b-262901ad76e8",
@@ -4756,14 +4756,14 @@
                     "last_character_index": 2559
                 },
                 {
-                    "file_path": "data/raw/vllm-0.10.1/docs/usage/security.md",
-                    "first_character_index": 1986,
-                    "last_character_index": 3980
-                },
-                {
                     "file_path": "data/raw/vllm-0.10.1/docs/deployment/k8s.md",
                     "first_character_index": 9943,
                     "last_character_index": 11848
+                },
+                {
+                    "file_path": "data/raw/vllm-0.10.1/docs/usage/security.md",
+                    "first_character_index": 1986,
+                    "last_character_index": 3980
                 },
                 {
                     "file_path": "data/raw/vllm-0.10.1/docs/deployment/k8s.md",
@@ -4786,7 +4786,7 @@
                     "last_character_index": 5947
                 }
             ],
-            "answer": "To forward the `vllm-router-service` port to access the vLLM deployment, you need to use the following command in a terminal:\n\n```bash\nkubectl port-forward svc/vllm-router-service 8080:8080\n```\n\nThis command:\n\n- Creates a port-forwarding rule\n- Exposes the port `8080` of the `vllm-router-service`\n- Maps it to the port `8080` of the vLLM service\n\nThe output will be:\n\n```text\nForwarding from 127.0.0.1:8080 -> 8080\nForwarding from [::1]:8080 -> 8080\n```\n\nYou can then access the vLLM service via:\n\n```bash\ncurl http://localhost:8080\n```\n\nThis will show the vLLM service in your browser, allowing you to interact with the model in the same way as before."
+            "answer": "To forward the `vllm-router-service` port to access the `vLLM deployment`, you can use the `kubectl port-forward` command in a terminal, where the service is running on the cluster.\n\n### Step-by-Step Instructions:\n\n1. **Identify the Service**: First, ensure that the `vllm-router-service` is already running. You can check this by looking at the Kubernetes deployment or service.\n\n   ```bash\n   kubectl get deployment -n vllm\n   kubectl get service vllm-router-service\n   ```\n\n2. **Forward the Service**: Use the `kubectl port-forward` command to forward the `vllm-router-service` port to the `vLLM deployment`. This will allow you to access the service via the port.\n\n   ```bash\n   kubectl port-forward vllm-router-service 8080:8080\n   ```\n\n### Example Output:\n\n```\nForwarding from 127.0.0.1:8080 -> 8080\nForwarding from [::1]:8080 -> 8080\n```\n\n### Explanation:\n\n- `kubectl port-forward` starts a forward port, which means the service will be accessible on the local machine by connecting to `8080:8080`.\n- This allows you to test the service directly using the service endpoint.\n\n### Summary:\n\nBy using the `kubectl port-forward` command, you can successfully access the `vLLM deployment` service, enabling direct access to the model and API endpoints."
         },
         {
             "question_id": "1c8c4c31-340c-413e-a6eb-7010f2c10e8b",
@@ -4843,7 +4843,7 @@
                     "last_character_index": 24676
                 }
             ],
-            "answer": "The vLLM model architectures that support LoRA fine-tuning are listed in the table below. These models are explicitly supported in the context and are listed with their respective architectures:\n\n- Qwen3ForCausalLM  \n- Qwen3MoEForCausalLM  \n- StableLMForCausalLM  \n- Starcoder2ForCausalLM  \n- SolarForCausalLM  \n- TeleChat2ForCausalLM  \n- TeleFLMForCausalLM  \n- XverseForCausalLM  \n- MiniMaxM1ForCausalLM  \n- MiniMaxText01ForCausalLM  \n- Zamba2ForCausalLM  \n\nAdditionally, the table includes generative models like Llama-based, Qwen2-based, Qwen3-based, RoBERTa-based, and others with their respective architectures."
+            "answer": "The vLLM model architectures that support LoRA fine-tuning include:\n\n- `SmolLM3ForCausalLM`\n- `Zamba2ForCausalLM`\n- `MiniMaxM1ForCausalLM`\n- `MiniMaxText01ForCausalLM`\n- `XverseForCausalLM`\n\nThese models are supported in the context and the table provided."
         },
         {
             "question_id": "a8d3991a-90f0-4dfc-a227-b2ef35c1db41",
@@ -4900,7 +4900,7 @@
                     "last_character_index": 3821
                 }
             ],
-            "answer": "The configurable parameters for the vLLM Helm chart are defined in the `values.yaml` file. You can find the parameters in this file. If you need further assistance, feel free to ask!"
+            "answer": "The configurable parameters for the vLLM Helm chart are defined in the `values.yaml` file. You can find the parameters in the `values.yaml` file, which is part of the Helm chart's configuration."
         },
         {
             "question_id": "3e7873ce-9d83-4d41-876d-6bb8bde7cb34",
@@ -4957,7 +4957,7 @@
                     "last_character_index": 1745
                 }
             ],
-            "answer": "vLLM CPU supports the following quantization methods:\n\n- AWQ (x86 only)\n- GPTQ (x86 only)\n- compressed-tensor INT8 W8A8 (x86, s390x)"
+            "answer": "The vLLM CPU supports the following quantization methods:\n\n- AWQ (x86 only)\n- GPTQ (x86 only)\n- compressed-tensor INT8 W8A8 (x86, s390x)"
         },
         {
             "question_id": "de2f7646-a182-4d9b-8fb0-b9edf7ce47e9",
@@ -5014,7 +5014,7 @@
                     "last_character_index": 1967
                 }
             ],
-            "answer": "Reinforcement Learning from Human Feedback (RLHF) is a technique that fine-tunes language models using human-generated preference data to align model outputs with desired behaviors."
+            "answer": "Reinforcement Learning from Human Feedback (RLHF) is a technique that fine-tunes language models using human-generated preference data to align model outputs with desired behaviors. This approach allows language models to learn from human feedback, improving their alignment with human expectations and enhancing their performance in real-world applications."
         },
         {
             "question_id": "451afbac-b40a-474f-880e-2bb73bd4ce8c",
@@ -5071,7 +5071,7 @@
                     "last_character_index": 5284
                 }
             ],
-            "answer": "The process_vision_info function in vLLM is supported by the following models:\n\n- **Qwen2.5-VL** and similar models (specifically the ones using the HuggingFace format for vision inputs)."
+            "answer": "The process_vision_info function in vLLM is supported for the following models:\n\n- Qwen2.5-VL and similar models."
         },
         {
             "question_id": "8e937b74-eb3a-4942-8e21-5a1159a1f175",
@@ -5128,7 +5128,7 @@
                     "last_character_index": 7949
                 }
             ],
-            "answer": "The OpenAI-compatible server supports the following APIs:\n\n1. **Completions API** - For creating chat completions.\n2. **Embeddings API** - For encoding and decoding embeddings.\n3. **Chat API** - For interacting with chat messages.\n4. **List Models API** - For retrieving available models.\n5. **Tokenizers API** - For tokenizing and decoding text.\n6. **Translation API** - For translating text between languages.\n\nThese APIs are all supported by the OpenAI-compatible server implementation."
+            "answer": "The OpenAI-compatible server supports the following APIs:\n\n1. **Completions** - for creating chat completions using the OpenAI API.\n2. **Embeddings** - for encoding input text using a specific embedding model.\n\nThese APIs are fully compatible with the OpenAI API protocol, allowing seamless integration for various use cases."
         },
         {
             "question_id": "9dc7f06a-bff9-403c-91d3-10c07b370096",
@@ -5185,7 +5185,7 @@
                     "last_character_index": 1990
                 }
             ],
-            "answer": "The reasoning content is present in the model output."
+            "answer": "Structured outputs in vLLM online serving are typically handled by the `LLMEngine` and `AsyncLLMEngine` classes. Here's how you can retrieve them:\n\n1. **LLMEngine**: If you have already started the server and used the `LLMEngine`, you can retrieve structured outputs by calling the `generate` method with appropriate parameters.\n2. **AsyncLLMEngine**: If you're using an asynchronous setup, you can retrieve output streams by calling the `outputs` method and accessing the token IDs from the output.\n\nFor example:\n\n```python\n# Using LLMEngine\nllm_engine = LLMEngine()\noutputs = llm_engine.generate(\"Structured output example\")\ngenerated_text = outputs[0].text\nprint(f\"Structured Output: {generated_text}\")\n```\n\nIf you want to fetch structured outputs without using the engine, you can use the `prompt` and `generated_text` directly from the server:\n\n```python\n# Connect to the server without using the engine\nurl = \"http://{vllm-serve-host}:{vllm-serve-port}/v1\"\nvllm_server = vllm.connect(url)\nprint(vllm_server.get_structure_output())\n```\n\nLet me know if you're looking for more specific examples or need help with formatting the output!"
         },
         {
             "question_id": "d30ed96e-b7a7-4700-8bf5-d1f162ff3f5c",
@@ -5242,7 +5242,7 @@
                     "last_character_index": 1402
                 }
             ],
-            "answer": "To serve the JinaVL-Reranker model using vLLM, you can follow these steps:\n\n1. **Install the required package**:\n   - Install `cohere` using `pip install cohere` as mentioned in the example.\n\n2. **Run the vLLM server**:\n   - Use the `vLLM serve` command with the model name as `BAAI/bge-reranker-base` (or the JinaVL-Reranker model).\n\n   ```bash\n   vllm serve BAAI/bge-reranker-base\n   ```\n\n   This will start a server that can be accessed using the OpenAI-compatible HTTP API.\n\n3. **Access the API**:\n   - You can query the `/models` endpoint to see the models available, including the JinaVL-Reranker model.\n\n   ```bash\n   curl -X 'POST' http://localhost:8000/v1/models | jq .\n   ```\n\n4. **Use the JinaVL-Reranker model**:\n   - Once the server is running, you can use the JinaVL-Reranker model by specifying the model parameter in your requests.\n\n   Example request:\n\n   ```bash\n   curl -X 'POST' http://localhost:8000/v1/rerank \\\n     -H 'accept: application/json' \\\n     -H 'Content-Type: application/json' \\\n     -d '{\n       \"model\": \"JinaVL-Reranker\",\n       \"query\": \"What is the capital of France?\",\n       \"documents\": [\n         \"The capital of Brazil is Brasilia.\",\n         \"The capital of France is Paris.\",\n         \"Horses and cows are both animals\"\n       ]\n     }'\n   ```\n\nThis way, you can interact with the JinaVL-Reranker model using the vLLM service."
+            "answer": "To serve the JinaVL-Reranker model using vLLM, you can follow these steps:\n\n1. **Install the required dependencies**:\n   - Install the `cohere` library using `pip install cohere`.\n\n2. **Create a vLLM configuration**:\n   - Use the `--lora-modules` option to specify any LoRA modules if needed.\n   - Set the `model` parameter to the JinaVL-Reranker model you want to use.\n\n3. **Run the server**:\n   - Execute the vLLM server with the following command:\n     ```\n     vllm serve jina-vl-reranker\n     ```\n\n4. **Access the API**:\n   - Use the OpenAI entrypoint's rerank API to query the JinaVL-Reranker model:\n     ```\n     curl -X 'POST' http://127.0.0.1:8000/v1/rerank \\\n     -H 'accept: application/json' \\\n     -H 'Content-Type: application/json' \\\n     -d '{\"model\": \"jina-vl-reranker-base\", \"query\": \"What is the capital of France?\", \"documents\": [ ... ]}'\n     ```\n\n5. **Expected Response**:\n   - The response will include the reranked results using the JinaVL-Reranker model.\n\nThis approach enables seamless integration of the JinaVL-Reranker model with vLLM for efficient and scalable AI serving."
         },
         {
             "question_id": "26a726a8-e47e-4933-9563-8b888a485464",
@@ -5299,7 +5299,7 @@
                     "last_character_index": 1913
                 }
             ],
-            "answer": "vLLM supports the following TPU versions for Google Cloud TPU:\n\n- **v1.x** (supported for most use cases)\n- **v2.x** (specifically for Google Cloud TPU)\n\nThese versions are compatible with the standard TPU architecture and are optimized for performance on Google Cloud TPU hardware."
+            "answer": "The TPU versions supported by vLLM for Google Cloud TPU are:\n\n- **vLLM 1.0**\n- **vLLM 1.1**\n- **vLLM 1.2**\n\nThese versions are compatible with the Google Cloud TPU platform, and they are compatible with all the quantization and optimization features listed in the table."
         },
         {
             "question_id": "becefabd-1c2a-4257-b14c-78733bb1407f",
@@ -5356,7 +5356,7 @@
                     "last_character_index": 3674
                 }
             ],
-            "answer": "When running vLLM on a Ray cluster with **16 GPUs across 2 nodes**, the recommended **tensor parallel size** and **pipeline parallel size** configuration is:\n\n- **Tensor Parallelism (TP):** Set `tensor_parallel_size` to 8 (since there are 8 GPUs total).\n- **Pipeline Parallelism (PP):** Set `pipeline_parallel_size` to 2 (since there are 2 nodes).\n\nThis configuration allows for efficient distribution of model parameters across GPUs, which is ideal for large models like those with 70B parameters (e.g., the `meta-llama/Llama-3.3-70B-Instruct` model).\n\nThis ensures that each GPU has enough memory to store model parameters, while also enabling efficient parallelism across both tensor and pipeline layers."
+            "answer": "When running vLLM on a Ray cluster with **16 GPUs across 2 nodes**, the recommended **tensor parallel size** and **pipeline parallel size** configuration is:\n\n- **Tensor parallel size**: `16`\n- **Pipeline parallel size**: `2`\n\nThese values are chosen to optimize performance and memory usage based on the model size and the number of GPUs available. This configuration ensures efficient use of all 16 GPUs while balancing throughput and latency, especially when the model is too large to fit a single GPU."
         },
         {
             "question_id": "32302028-1ea8-40ae-87d6-db98e83f7e49",
@@ -5413,7 +5413,7 @@
                     "last_character_index": 10753
                 }
             ],
-            "answer": "To limit the number of compilation jobs when building vLLM and avoid system overload, you can set the environment variable `MAX_JOBS` to a reasonable number. This number is either:\n\n1. The value of the `MAX_JOBS` environment variable (if defined),\n2. The number of CPUs available, or\n3. The number of available threads (as determined by `os.sched_getaffinity(0)` if `os.sched_getaffinity` isn't available).\n\nWhen setting this value, you can use:\n\n```bash\nexport MAX_JOBS=5\n```\n\nor\n\n```bash\nexport MAX_JOBS=1\n```\n\nThis will reduce the number of parallel compilation jobs, helping to manage memory and processing resources."
+            "answer": "To limit the number of compilation jobs when building vLLM and avoid system overload, you can use the `MAX_JOBS` environment variable. This variable determines how many jobs the CMake compiler will run in parallel.\n\n### How to Use:\n- Set the `MAX_JOBS` environment variable to a number that is less than or equal to the number of CPUs available on your system. For example:\n  ```bash\n  export MAX_JOBS=1\n  ```\n\n### Example:\nIf your system has 4 CPUs, you can set:\n```bash\nexport MAX_JOBS=4\n```\n\nThis approach helps manage build time and avoids overwhelming your system with multiple compilation jobs."
         },
         {
             "question_id": "dab5d35d-02a9-4ef3-a604-2ef45c2327c2",
@@ -5470,7 +5470,7 @@
                     "last_character_index": 1996
                 }
             ],
-            "answer": "To access the parsed response from OpenAI's structured output completion in vLLM, you can look for the `reasoning_content` and `content` fields in the response. If the response includes a `reasoning_content` field, it will contain the content that is used to explain the reasoning behind the output. If the content is not available, you can check the `content` field or use the streaming API to retrieve the content as it is generated."
+            "answer": "To access the parsed response from OpenAI's structured output completion in vLLM, you can use the `reasoning_content` field from the response. This field contains the content of the reasoning process, which is typically available in the `message.reasoning_content` part of the response.\n\nThe example usage is as follows:\n\n```python\nfrom openai import OpenAI\n\nclient = OpenAI(base_url=\"http://localhost:8000/v1\", api_key=\"EMPTY\")\n\nmessages = [\n    {\"role\": \"user\", \"content\": \"9.11 and 9.8, which is greater?\"}\n]\n\nresponse = client.chat.completions.create(\n    model=client.models.list().data[0].id,\n    messages=messages,\n    response_format={\n        \"type\": \"str\",\n        \"content\": \"The reasoning process is as follows: 9.11 is greater than 9.8.\"\n    },\n)\n\nprint(\"Reasoning Content:\", response.choices[0].message.reasoning_content)\n```\n\nThis will return the reasoning content, which is the parsed response from the OpenAI API."
         },
         {
             "question_id": "0489281a-086d-4851-92ba-c593525fbe36",
@@ -5527,7 +5527,7 @@
                     "last_character_index": 15350
                 }
             ],
-            "answer": "The mandatory flag to enable automatic function calling in vLLM is `--enable-auto-tool-choice`."
+            "answer": "The mandatory flag to enable automatic function calling in vLLM is `--enable-auto-tool-choice`. This flag tells vLLM that you want to enable the model to generate its own tool calls."
         },
         {
             "question_id": "b5191cd4-9b74-4211-9e60-6272498deae3",
@@ -5584,7 +5584,7 @@
                     "last_character_index": 7801
                 }
             ],
-            "answer": "To apply chat templates to prompts in vLLM, you can use the `chat_template` parameter. If not provided, the default chat template will be used. Here's how to apply it:\n\n1. **Define the Chat Template**:  \n   If you have a specific chat template, define it in the `chat_template` parameter. For example, if you want to format the prompt as a list of dictionaries, set:\n   ```python\n   chat_template_content_format = \"openai\"\n   ```\n\n2. **Use the Chat Template**:  \n   When generating responses, pass the `chat_template` parameter to the model. For example:\n   ```python\n   llm = LLM(model=\"meta-llama/Meta-Llama-3-8B-Instruct\")\n   llm.chat(messages_list, chat_template=\"your_chat_template\")\n   ```\n\n3. **Example**:  \n   If your chat template is already set up, you can directly use it without specifying the content format. For example:\n   ```python\n   llm.chat(messages_list, chat_template=\"your_template\")\n   ```\n\nMake sure to replace `\"your_template\"` with your actual chat template content. This will format the prompts according to your specified template."
+            "answer": "To apply chat templates to prompts in vLLM, you can use the `chat_template` parameter when calling the model with the `LLM` class. This parameter determines how the chat conversation is structured and how the content is rendered.\n\nHere's how you can apply a chat template:\n\n```python\nfrom vllm import LLM\n\nllm = LLM(model=\"meta-llama/Meta-Llama-3-8B-Instruct\", chat_template=\"your_template_here\")\n\n# Now, use the chat_template parameter\n```\n\nReplace `\"your_template_here\"` with the actual chat template you want to use. The template is a string that defines the structure and content of the chat.\n\nThis approach allows you to customize how the chat conversation is formatted and rendered, making it easier to manage and maintain your chat templates."
         },
         {
             "question_id": "db4f05fe-78bf-402f-b02f-630d0a3959c3",
@@ -5641,7 +5641,7 @@
                     "last_character_index": 3975
                 }
             ],
-            "answer": "To implement a basic vLLM model, you need to follow these steps:\n\n1. **Set up the model**: You can use either the Transformers or a model from the vLLM repository. For example, if you're using a Transformers model, you can set `model_impl=\"transformers\"` when creating the LLM instance.\n\n2. **Configure the model**: Depending on the model you're using, you may need to specify the model name or path. For instance, if you're using a pre-trained model from the vLLM repository, you can use the model name directly.\n\n3. **Use the LLM**: Once the model is set up, you can use the LLM class to perform inference. This includes tasks such as classification, embedding, reranking, and more.\n\nBy following these steps, you can effectively implement a basic vLLM model."
+            "answer": "To implement a basic vLLM model, you need to create a class that provides the primary Python interface for doing offline inference. This interface interacts with a model without the use of a separate model inference server.\n\nHere's how you can implement a basic vLLM model:\n\n1. **Create a class**: Define a class `LLM` that provides the primary Python interface for interacting with a model.\n\n```python\nclass LLM:\n    def __init__(self, model, runner):\n        self.model = model\n        self.runner = runner\n\n    def embed(self, text):\n        # Implement embedding logic here\n        pass\n\n    def classify(self, prompt):\n        # Implement classification logic here\n        pass\n\n    def score(self, prompt1, prompt2):\n        # Implement similarity score logic here\n        pass\n\n    def reward(self, prompt):\n        # Implement reward logic here\n        pass\n\n    def beam_search(self, prompts, params):\n        # Implement beam search logic here\n        pass\n\n    def chat(self, prompt):\n        # Implement chat logic here\n        pass\n```\n\nThis class provides the basic functionality for interacting with a model using the vLLM library. Each method handles a specific task, such as embedding, classification, similarity score, reward, beam search, and chat. You can use this class as a starting point for implementing your own vLLM model."
         },
         {
             "question_id": "4e658668-9e1d-4068-ae99-1f77bab83523",
@@ -5698,7 +5698,7 @@
                     "last_character_index": 11091
                 }
             ],
-            "answer": "The flag that must be explicitly passed when serving the **VLM2Vec-Full model** in **vLLM** to run it in **embedding mode** is:\n\n### `--embedding`\n\nThis flag tells the vLLM system to use the VLM2Vec-Full model for embedding tasks, rather than the default model. If you want to run it in embedding mode, you must explicitly set this flag.\n\n```bash\nvllm --embedding\n```\n\nThis flag is required to activate embedding mode and should be passed as an argument."
+            "answer": "The flag that must be explicitly passed when serving the VLM2Vec-Full model in vLLM to run it in **embedding mode** is:\n\n```python\n\"model\": \"TIGER-Lab/VLM2Vec-Full\",\n```\n\nThis flag is specified in the `vlm2vec()` function call and is required to enable the embedding mode of the model."
         }
     ],
     "k": 10

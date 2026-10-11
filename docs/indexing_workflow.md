@@ -2,7 +2,7 @@
 
 Call chain for `make run` / `index` in this repo.
 
-```
+```txt
 make run
   └─▶ uv run python -m src index --max_chunk_size 2000
         └─▶ RagCLI.index()              (__main__.py)
@@ -13,16 +13,17 @@ make run
 
 ---
 
-### Stage 1 — `get_all_files()` `file_processing.py`
+## Stage 1 — `get_all_files()` `file_processing.py`
 
 Walks `data/raw/vllm-0.10.1/` with `os.walk`. It:
+
 - **Skips** hidden dirs (`.github`, `.buildkite` …) and `__pycache__`, `node_modules`, `.git`
 - **Skips** hidden files (starting with `.`)
 - Returns a flat `list[str]` of ~2 734 file paths
 
 ---
 
-### Stage 2 — `chunk_content()` `chunking.py` ← called for every file
+## Stage 2 — `chunk_content()` `chunking.py` ← called for every file
 
 For each file it does three things:
 
@@ -30,7 +31,7 @@ For each file it does three things:
 
 **2. Pick the right chunker** based on extension:
 
-```
+```txt
 .py .pyi .cpp .h .sh .js …  →  CodeChunker    (splits on AST boundaries)
 .md .html .rst              →  RecursiveChunker (splits on headings/paragraphs)
 .txt .yaml .json .toml …   →  SentenceChunker  (splits on sentences, with overlap)
@@ -38,6 +39,7 @@ anything else               →  skip (return [])
 ```
 
 **3. Build `ChunkSource` objects** — each chunk gets:
+
 - `text` — the raw text slice
 - `source.file_path` — exact path as stored (e.g. `data/raw/vllm-0.10.1/vllm/engine/llm_engine.py`)
 - `source.first_character_index` / `last_character_index` — byte offsets in the original file
@@ -46,7 +48,7 @@ Then `_enforce_max_size()` runs as a hard safety net: if any chunk is still > 20
 
 ---
 
-### Stage 3 — `create_bm25_index()` `indexing.py`
+## Stage 3 — `create_bm25_index()` `indexing.py`
 
 Takes the full `list[ChunkSource]` (~16 000 chunks) and:
 
@@ -57,9 +59,9 @@ Takes the full `list[ChunkSource]` (~16 000 chunks) and:
 
 ---
 
-### What lives in `data/processed/` after indexing
+## What lives in `data/processed/` after indexing
 
-```
+```txt
 data/processed/
 ├── metadata.json        ← file_path + char ranges for every chunk
 ├── corpus.jsonl         ← raw text of every chunk

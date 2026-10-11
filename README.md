@@ -366,3 +366,7 @@ We used AI tools (Claude via Cursor) for:
 
 We reviewed, tested, and kept only the generated code we understand.
 Retrieval, chunking, and architecture choices are ours.
+
+## Sources
+
+[SentenceTransformers Documentation](https://sbert.net)
